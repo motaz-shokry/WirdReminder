@@ -217,6 +217,100 @@ body {
 }
 
 /* ===========================================================================
+   SCREENSHOTS SHOWCASE SECTION
+   =========================================================================== */
+.screenshots {
+    padding: 3rem var(--container-padding);
+    max-width: 1200px;
+    margin: 0 auto;
+}
+
+.screenshots-header {
+    text-align: center;
+    margin-bottom: 2rem;
+}
+
+.screenshots-header h2 {
+    font-size: 1.5rem;
+    font-weight: 600;
+    letter-spacing: -0.025em;
+    margin-bottom: 0.25rem;
+}
+
+.screenshots-header p {
+    color: hsl(var(--muted-foreground));
+    font-size: 0.875rem;
+}
+
+.screenshots-gallery {
+    display: flex;
+    gap: 1.5rem;
+    overflow-x: auto;
+    scroll-snap-type: x mandatory;
+    padding: 1rem 0.5rem;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: thin;
+    scrollbar-color: hsl(var(--border)) transparent;
+}
+
+.screenshots-gallery::-webkit-scrollbar {
+    height: 8px;
+}
+
+.screenshots-gallery::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.screenshots-gallery::-webkit-scrollbar-thumb {
+    background-color: hsl(var(--border));
+    border-radius: 4px;
+}
+
+.screenshot-item {
+    flex: 0 0 auto;
+    scroll-snap-align: center;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.75rem;
+    transition: transform 0.3s ease;
+}
+
+.screenshot-item:hover {
+    transform: translateY(-4px);
+}
+
+.screenshot-item img {
+    width: 280px;
+    height: auto;
+    border-radius: 12px;
+    border: 1px solid hsl(var(--border));
+    box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 4px 10px -5px rgba(0, 0, 0, 0.05);
+    transition: box-shadow 0.3s ease;
+}
+
+.screenshot-item:hover img {
+    box-shadow: 0 20px 40px -10px rgba(0, 0, 0, 0.15), 0 8px 20px -8px rgba(0, 0, 0, 0.1);
+}
+
+.screenshot-label {
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: hsl(var(--muted-foreground));
+    background-color: hsl(var(--muted));
+    padding: 0.375rem 0.75rem;
+    border-radius: 9999px;
+}
+
+/* Center gallery on larger screens */
+@media (min-width: 1100px) {
+    .screenshots-gallery {
+        justify-content: center;
+        overflow-x: visible;
+    }
+}
+
+/* ===========================================================================
    DEMO SECTION WITH PHONE FRAME
    =========================================================================== */
 .demo {
