@@ -1,6 +1,6 @@
 # Dependencies
 node_modules/
-documentation/
+agent/
 
 # Build Artifacts
 build/
