@@ -22,5 +22,10 @@ export const env = {
     /**
      * Detection for mobile (Capacitor/Native)
      */
-    isMobile: typeof window !== 'undefined' && !!window.Capacitor && window.Capacitor.isNativePlatform
+    isMobile: typeof window !== 'undefined' && !!window.Capacitor && window.Capacitor.isNativePlatform,
+
+    /**
+     * Current Application Version (synced from package.json)
+     */
+    version: '1.1.0'
 };

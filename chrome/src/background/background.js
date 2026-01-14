@@ -2,10 +2,19 @@ import { showNotification } from './notifications.js';
 import { storage } from '../core/js/adapter/storage.js';
 import { fetchAllSurahs } from '../core/js/api.js';
 
+const api = typeof browser !== 'undefined' ? browser : chrome;
+
 // --- Initialization ---
 
-chrome.runtime.onInstalled.addListener(async () => {
-    console.log('Extension installed. Initializing...');
+api.runtime.onInstalled.addListener(async (details) => {
+    console.log(`Extension ${details.reason}. Initializing...`);
+
+    // Handle cache invalidation on update
+    if (details.reason === 'update') {
+        const currentVersion = api.runtime.getManifest().version;
+        console.log(`Updated from ${details.previousVersion} to ${currentVersion}. Clearing metadata cache...`);
+        await storage.remove('surah_metadata');
+    }
 
     // Initialize storage if empty
     const user_reminders = await storage.get('user_reminders');
@@ -13,7 +22,7 @@ chrome.runtime.onInstalled.addListener(async () => {
         await storage.set({ user_reminders: [] });
     }
 
-    // Fetch and store Surah metadata using core API
+    // Fetch and store Surah metadata using core API (refreshes if we just cleared it)
     await fetchAllSurahs();
 });
 

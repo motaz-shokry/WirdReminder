@@ -1,4 +1,4 @@
-const CACHE_NAME = 'wird-reminder-v1';
+const CACHE_NAME = 'wird-reminder-v1.1.0';
 const ASSETS_TO_CACHE = [
     './',
     './index.html',

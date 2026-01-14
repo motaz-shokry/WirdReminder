@@ -10,6 +10,10 @@ const androidGradlePath = path.join(__dirname, '..', 'android', 'app', 'build.gr
 const rootPackage = JSON.parse(fs.readFileSync(rootPackagePath, 'utf8'));
 const version = rootPackage.version;
 
+const swPath = path.join(__dirname, '..', 'www', 'sw.js');
+
+const envPath = path.join(__dirname, '..', 'core', 'js', 'adapter', 'env.js');
+
 function updateManifest(filePath) {
     if (fs.existsSync(filePath)) {
         const manifest = JSON.parse(fs.readFileSync(filePath, 'utf8'));
@@ -34,7 +38,29 @@ function updateAndroidVersion(filePath) {
     }
 }
 
+function updateSwVersion(filePath) {
+    if (fs.existsSync(filePath)) {
+        let content = fs.readFileSync(filePath, 'utf8');
+        // Update const CACHE_NAME = '...';
+        content = content.replace(/const CACHE_NAME = '.*?';/g, `const CACHE_NAME = 'wird-reminder-v${version}';`);
+        fs.writeFileSync(filePath, content);
+        console.log(`✅ Updated ${path.relative(path.join(__dirname, '..'), filePath)} cache name to v${version}`);
+    }
+}
+
+function updateEnvVersion(filePath) {
+    if (fs.existsSync(filePath)) {
+        let content = fs.readFileSync(filePath, 'utf8');
+        // Update version: '...'
+        content = content.replace(/version:\s+'.*?'/g, `version: '${version}'`);
+        fs.writeFileSync(filePath, content);
+        console.log(`✅ Updated ${path.relative(path.join(__dirname, '..'), filePath)} to v${version}`);
+    }
+}
+
 updateManifest(chromeManifestPath);
 updateManifest(firefoxManifestPath);
 updateManifest(wwwManifestPath);
 updateAndroidVersion(androidGradlePath);
+updateSwVersion(swPath);
+updateEnvVersion(envPath);

@@ -61,6 +61,7 @@ const appContainer = document.getElementById('app-container');
 // INITIALIZATION
 // ============================================
 document.addEventListener('DOMContentLoaded', async () => {
+    await checkAppVersionUpdate();
     initTabs();
     await loadPresets();
     await loadAllReminders();
@@ -76,6 +77,22 @@ document.addEventListener('DOMContentLoaded', async () => {
         tabs[0].click();
     });
 });
+
+/**
+ * Checks if the app has been updated and clears specific caches if needed.
+ */
+async function checkAppVersionUpdate() {
+    const lastVersion = await storage.get('last_app_version');
+    const currentVersion = env.version;
+
+    if (lastVersion && lastVersion !== currentVersion) {
+        console.log(`[App] Version change detected: ${lastVersion} -> ${currentVersion}. Invalidating cache...`);
+        // We only clear surah_metadata, user_reminders and read_history are preserved.
+        await storage.remove('surah_metadata');
+    }
+
+    await storage.set({ 'last_app_version': currentVersion });
+}
 
 // ============================================
 // MOBILE CAPACITOR INIT

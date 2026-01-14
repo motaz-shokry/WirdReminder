@@ -27,8 +27,9 @@ function run(command, cwd = rootDir, failOnError = true) {
     }
 }
 
-// 2. Sync Core Assets
-console.log('\n📦 Phase 1: Synchronizing Core Assets...');
+// 2. Sync Core Assets & Versions
+console.log('\n📦 Phase 1: Synchronizing Core Assets & Versions...');
+run('node scripts/version-sync.js');
 run('node scripts/sync.js');
 
 // 3. Build Web/Extensions
