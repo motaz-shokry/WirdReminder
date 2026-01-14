@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
-  "name": "مُذكِّر الوِرد اليومي",
-  "version": "1.0.1",
+  "name": "مذكّر الورد اليومي",
+  "version": "1.1.0",
   "description": "مُذكِّر الوِرد اليومي - يساعدك على المداومة على ورد القرآن اليومي مع تذكيرات ذكية وعرض جميل للآيات. مجاني وبدون إعلانات.",
   "permissions": [
     "alarms",
@@ -18,14 +18,14 @@
   "action": {
     "default_popup": "src/popup/popup.html",
     "default_icon": {
-      "16": "src/assets/icons/icon16.png",
-      "48": "src/assets/icons/icon48.png",
-      "128": "src/assets/icons/icon128.png"
+      "16": "src/core/assets/icons/icon16.png",
+      "48": "src/core/assets/icons/icon48.png",
+      "128": "src/core/assets/icons/icon128.png"
     }
   },
   "icons": {
-    "16": "src/assets/icons/icon16.png",
-    "48": "src/assets/icons/icon48.png",
-    "128": "src/assets/icons/icon128.png"
+    "16": "src/core/assets/icons/icon16.png",
+    "48": "src/core/assets/icons/icon48.png",
+    "128": "src/core/assets/icons/icon128.png"
   }
 }

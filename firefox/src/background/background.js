@@ -1,39 +1,30 @@
-// src/background/background.js
 import { showNotification } from './notifications.js';
+import { storage } from '../core/js/adapter/storage.js';
+import { fetchAllSurahs } from '../core/js/api.js';
+import { env } from '../core/js/adapter/env.js';
+
+const api = typeof browser !== 'undefined' ? browser : chrome;
 
 // --- Initialization ---
 
-browser.runtime.onInstalled.addListener(async () => {
+api.runtime.onInstalled.addListener(async () => {
     console.log('Extension installed. Initializing...');
 
     // Initialize storage if empty
-    const { user_reminders } = await browser.storage.local.get('user_reminders');
+    const user_reminders = await storage.get('user_reminders');
     if (!user_reminders) {
-        await browser.storage.local.set({ user_reminders: [] });
+        await storage.set({ user_reminders: [] });
     }
 
-    // Fetch and store Surah metadata
-    await fetchAndStoreSurahMetadata();
+    // Fetch and store Surah metadata using core API
+    await fetchAllSurahs();
 });
 
-async function fetchAndStoreSurahMetadata() {
-    try {
-        const res = await fetch('https://api.quran.com/api/v4/chapters');
-        const data = await res.json();
-        const metadata = {};
-        data.chapters.forEach(c => {
-            metadata[c.id] = c.name_arabic;
-        });
-        await browser.storage.local.set({ surah_metadata: metadata });
-        console.log('Surah metadata cached:', Object.keys(metadata).length, 'chapters');
-    } catch (e) {
-        console.error('Failed to cache Surah metadata:', e);
-    }
-}
+// fetchAndStoreSurahMetadata removed, handled by fetchAllSurahs()
 
 // --- Alarm Listener ---
 
-browser.alarms.onAlarm.addListener(async (alarm) => {
+api.alarms.onAlarm.addListener(async (alarm) => {
     console.log('Alarm fired:', alarm.name);
 
     if (alarm.name.startsWith('reminder_')) {
@@ -44,16 +35,16 @@ browser.alarms.onAlarm.addListener(async (alarm) => {
 
 // --- Notification Click Listener (Firefox uses onClicked, not onButtonClicked) ---
 
-browser.notifications.onClicked.addListener(async (notificationId) => {
+api.notifications.onClicked.addListener(async (notificationId) => {
     console.log('Notification clicked:', notificationId);
     if (notificationId.startsWith('reminder_')) {
         const reminderId = notificationId.replace('reminder_', '');
 
         // Open Reader in new tab
-        const url = browser.runtime.getURL(`src/reader/reader.html?reminderId=${reminderId}`);
-        browser.tabs.create({ url });
+        const url = api.runtime.getURL(`src/reader/reader.html?reminderId=${reminderId}`);
+        api.tabs.create({ url });
 
         // Clear the notification after clicking
-        browser.notifications.clear(notificationId);
+        api.notifications.clear(notificationId);
     }
 });

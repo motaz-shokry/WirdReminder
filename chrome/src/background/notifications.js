@@ -1,11 +1,11 @@
-// src/background/notifications.js
+import { storage } from '../core/js/adapter/storage.js';
 
 export async function showNotification(reminderId, notificationId) {
     try {
-        const { user_reminders } = await chrome.storage.local.get('user_reminders');
+        const user_reminders = await storage.get('user_reminders');
 
         // Fetch presets
-        const url = chrome.runtime.getURL('src/data/presets.json');
+        const url = chrome.runtime.getURL('src/core/data/presets.json');
         const response = await fetch(url);
         const presets = await response.json();
 
@@ -16,7 +16,7 @@ export async function showNotification(reminderId, notificationId) {
 
         const notificationOptions = {
             type: 'basic',
-            iconUrl: chrome.runtime.getURL('src/assets/icons/icon128.png'),
+            iconUrl: chrome.runtime.getURL('src/core/assets/icons/icon128.png'),
             title: 'مُذكِّر الوِرد اليومي',
             message: reminder ? `حان وقت قراءة: ${reminder.name}` : 'حان وقت وردك اليومي!',
             priority: 2,

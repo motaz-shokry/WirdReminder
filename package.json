@@ -1,0 +1,33 @@
+{
+  "name": "wirdreminder",
+  "version": "1.1.0",
+  "description": "A humble companion for your journey with the Holy Quran.",
+  "main": "www/app.js",
+  "scripts": {
+    "postversion": "node scripts/version-sync.js",
+    "sync": "node scripts/sync.js",
+    "build": "node scripts/build.js",
+    "build:android": "npx cap copy android",
+    "android:refresh": "npm run sync && ANDROID_HOME=/home/hadi/Android/Sdk npx cap run android",
+    "tools:icons": "node scripts/generate-icons.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/hadealahmad/WirdReminder.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/hadealahmad/WirdReminder/issues"
+  },
+  "homepage": "https://github.com/hadealahmad/WirdReminder#readme",
+  "dependencies": {
+    "@capacitor/android": "^8.0.1",
+    "@capacitor/app": "^8.0.0",
+    "@capacitor/cli": "^8.0.1",
+    "@capacitor/core": "^8.0.1",
+    "@capacitor/local-notifications": "^8.0.0"
+  }
+}

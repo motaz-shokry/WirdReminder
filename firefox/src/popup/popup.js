@@ -1,4 +1,10 @@
-// src/popup/popup.js
+import { storage } from '../core/js/adapter/storage.js';
+import { fetchAllSurahs, getSurahName } from '../core/js/api.js';
+import * as reminderLogic from '../core/js/logic/reminders.js';
+import { notificationManager } from '../core/js/adapter/notifications.js';
+
+// Define cross-browser API
+const api = typeof browser !== 'undefined' ? browser : chrome;
 
 // State
 let allSurahs = [];
@@ -26,7 +32,9 @@ document.addEventListener('DOMContentLoaded', async () => {
     await loadPresetsData();
     initTabs();
     await loadAllReminders();
-    fetchSurahs();
+    // fetchSurahs() is now async via core api
+    allSurahs = await fetchAllSurahs();
+    populateTargetSelect();
 
     cancelEditBtn.addEventListener('click', () => {
         resetForm();
@@ -36,7 +44,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
 async function loadPresetsData() {
     try {
-        const response = await fetch('../data/presets.json');
+        const response = await fetch('../core/data/presets.json');
         presets = await response.json();
     } catch (e) {
         console.error('Failed to load presets:', e);
@@ -70,10 +78,10 @@ function initTabs() {
 // --- Data Loading ---
 
 async function loadAllReminders() {
-    const { user_reminders, read_history, bookmarks } = await browser.storage.local.get(['user_reminders', 'read_history', 'bookmarks']);
-    const history = read_history || [];
-    const activeReminders = user_reminders || [];
-    const savedBookmarks = bookmarks || {};
+    const data = await storage.get(['user_reminders', 'read_history', 'bookmarks']);
+    const history = data.read_history || [];
+    const activeReminders = data.user_reminders || [];
+    const savedBookmarks = data.bookmarks || {};
 
     // 1. Render Active Reminders List
     renderActiveList(activeReminders, history, savedBookmarks);
@@ -89,17 +97,11 @@ function renderActiveList(reminders, history, bookmarks) {
     const enabledReminders = reminders.filter(r => r.enabled !== false);
 
     if (enabledReminders.length === 0) {
-        const emptyDiv = document.createElement('div');
-        emptyDiv.className = 'empty-state';
-        const icon = document.createElement('div');
-        icon.className = 'empty-state-icon';
-        icon.textContent = '📖';
-        const text = document.createElement('p');
-        text.className = 'empty-state-text';
-        text.textContent = 'لا توجد تذكيرات نشطة حالياً.';
-        emptyDiv.appendChild(icon);
-        emptyDiv.appendChild(text);
-        myRemindersList.appendChild(emptyDiv);
+        myRemindersList.innerHTML = `
+            <div class="empty-state">
+                <div class="empty-state-icon">📖</div>
+                <p class="empty-state-text">لا توجد تذكيرات نشطة حالياً.</p>
+            </div>`;
         return;
     }
 
@@ -127,17 +129,11 @@ function renderPresetsList(activeReminders, history, bookmarks) {
 
     if (disabledPresets.length === 0) {
         // All presets are enabled, show a message
-        const emptyDiv = document.createElement('div');
-        emptyDiv.className = 'empty-state';
-        const icon = document.createElement('div');
-        icon.className = 'empty-state-icon';
-        icon.textContent = '✨';
-        const text = document.createElement('p');
-        text.className = 'empty-state-text';
-        text.textContent = 'جميع تذكيرات السنن مفعّلة في قائمتك!';
-        emptyDiv.appendChild(icon);
-        emptyDiv.appendChild(text);
-        presetsList.appendChild(emptyDiv);
+        presetsList.innerHTML = `
+            <div class="empty-state">
+                <div class="empty-state-icon">✨</div>
+                <p class="empty-state-text">جميع تذكيرات السنن مفعّلة في قائمتك!</p>
+            </div>`;
         return;
     }
 
@@ -158,50 +154,8 @@ function renderPresetsList(activeReminders, history, bookmarks) {
  * @param {Number} lastReadTs - Last read timestamp
  * @returns {Boolean} True if read in current period
  */
-function isReadInCurrentPeriod(reminder, lastReadTs) {
-    if (!lastReadTs || !reminder.timing) return false;
-
-    const now = new Date();
-    const lastRead = new Date(lastReadTs);
-    const freq = reminder.timing.frequency;
-    const [hours, minutes] = (reminder.timing.time || '00:00').split(':').map(Number);
-
-    if (freq === 'daily') {
-        // Reset daily at the scheduled time
-        const resetTime = new Date(now);
-        resetTime.setHours(hours, minutes, 0, 0);
-
-        // If we haven't passed today's reset time, use yesterday's reset
-        if (now < resetTime) {
-            resetTime.setDate(resetTime.getDate() - 1);
-        }
-
-        return lastRead >= resetTime;
-    } else if (freq === 'weekly') {
-        // Reset weekly on the scheduled day at the scheduled time
-        const scheduledDay = reminder.timing.day ?? 5; // default Friday
-        const resetTime = new Date(now);
-        resetTime.setHours(hours, minutes, 0, 0);
-
-        // Find the most recent occurrence of the scheduled day
-        const currentDay = now.getDay();
-        let daysDiff = currentDay - scheduledDay;
-        if (daysDiff < 0) daysDiff += 7;
-
-        // If today is the scheduled day but we haven't passed the time, go back a week
-        if (daysDiff === 0 && now < resetTime) {
-            daysDiff = 7;
-        }
-
-        resetTime.setDate(resetTime.getDate() - daysDiff);
-
-        return lastRead >= resetTime;
-    }
-
-    // No frequency info, treat as always valid if read recently (within 24h)
-    const oneDayAgo = new Date(now.getTime() - 24 * 60 * 60 * 1000);
-    return lastRead >= oneDayAgo;
-}
+const isReadInCurrentPeriod = reminderLogic.isReadInCurrentPeriod;
+const getFrequencyLabel = reminderLogic.getFrequencyLabel;
 
 /**
  * Unified Card Creation
@@ -223,11 +177,20 @@ function createReminderCard(reminder, lastReadTs, isActive, hasBookmark = false)
     const isRead = isReadInCurrentPeriod(reminder, lastReadTs);
     const checkboxLabel = isRead ? 'مقروء' : 'غير مقروء';
 
+    // Only show checkbox if notifications are enabled (isActive)
+    const checkboxHtml = isActive ? `
+            <div class="checkbox-wrapper mark-read-checkbox" data-id="${reminder.id}">
+                <button class="checkbox" role="checkbox" aria-checked="${isRead}">
+                    <span class="checkbox-indicator">✓</span>
+                </button>
+                <span class="checkbox-label">${checkboxLabel}</span>
+            </div>` : '';
+
     div.innerHTML = `
         <div class="card-header">
             <div>
-                <div class="card-title"></div>
-                <div class="card-description"></div>
+                <div class="card-title">${bookmarkBadge}${reminder.name || reminder.description}</div>
+                <div class="card-description">${timeLabel}</div>
             </div>
             <div class="card-header-actions">
                 <button class="btn btn-ghost calendar-btn" title="سجل الإنجاز">
@@ -238,7 +201,7 @@ function createReminderCard(reminder, lastReadTs, isActive, hasBookmark = false)
                         <line x1="3" y1="10" x2="21" y2="10"></line>
                     </svg>
                 </button>
-                <button class="switch" role="switch">
+                <button class="switch" role="switch" aria-checked="${isActive && reminder.enabled !== false}" data-id="${reminder.id}">
                     <span class="switch-thumb"></span>
                 </button>
             </div>
@@ -246,67 +209,12 @@ function createReminderCard(reminder, lastReadTs, isActive, hasBookmark = false)
         <div class="card-actions">
             <div class="btn-group">
                 <button class="btn btn-primary read-btn">اقرأ</button>
-                <button class="btn btn-outline edit-btn">تعديل</button>
+                <button class="btn btn-outline edit-btn" ${!isActive ? 'style="display:none"' : ''}>تعديل</button>
             </div>
-            <div class="checkbox-container"></div>
-            <button class="btn btn-ghost btn-destructive delete-btn">حذف</button>
+            ${checkboxHtml}
+            <button class="btn btn-ghost btn-destructive delete-btn" ${!isActive ? 'style="display:none"' : ''}>حذف</button>
         </div>
     `;
-
-    const switchBtn = div.querySelector('.switch');
-    switchBtn.dataset.id = reminder.id;
-
-    // Set dynamic text safely
-    const cardTitle = div.querySelector('.card-title');
-    if (hasBookmark) {
-        const badge = document.createElement('span');
-        badge.style.marginRight = '0.5rem';
-        badge.style.fontSize = '1rem';
-        badge.title = 'لديك علامة محفوظة';
-        badge.textContent = '🔖';
-        cardTitle.appendChild(badge);
-    }
-    cardTitle.appendChild(document.createTextNode(reminder.name || reminder.description));
-
-    div.querySelector('.card-description').textContent = timeLabel;
-
-    // Set switch state
-    switchBtn.setAttribute('aria-checked', (isActive && reminder.enabled !== false).toString());
-
-    // Setup Edit/Delete visibility
-    const editBtn = div.querySelector('.edit-btn');
-    const delBtn = div.querySelector('.delete-btn');
-    if (!isActive) {
-        editBtn.style.display = 'none';
-        delBtn.style.display = 'none';
-    }
-
-    // Set up checkbox if active
-    if (isActive) {
-        const checkboxContainer = div.querySelector('.checkbox-container');
-        const wrapper = document.createElement('div');
-        wrapper.className = 'checkbox-wrapper mark-read-checkbox';
-        wrapper.dataset.id = reminder.id;
-
-        const btn = document.createElement('button');
-        btn.className = 'checkbox';
-        btn.setAttribute('role', 'checkbox');
-        btn.setAttribute('aria-checked', isRead.toString());
-
-        const indicator = document.createElement('span');
-        indicator.className = 'checkbox-indicator';
-        indicator.textContent = '✓';
-        btn.appendChild(indicator);
-
-        const label = document.createElement('span');
-        label.className = 'checkbox-label';
-        label.textContent = checkboxLabel;
-
-        wrapper.appendChild(btn);
-        wrapper.appendChild(label);
-        checkboxContainer.appendChild(wrapper);
-    }
-
 
     // Calendar Button
     const calendarBtn = div.querySelector('.calendar-btn');
@@ -315,6 +223,7 @@ function createReminderCard(reminder, lastReadTs, isActive, hasBookmark = false)
     });
 
     // Toggle
+    const switchBtn = div.querySelector('.switch');
     switchBtn.addEventListener('click', async () => {
         const currentlyChecked = switchBtn.getAttribute('aria-checked') === 'true';
         const newVal = !currentlyChecked;
@@ -344,8 +253,8 @@ function createReminderCard(reminder, lastReadTs, isActive, hasBookmark = false)
 
     // Read
     div.querySelector('.read-btn').addEventListener('click', () => {
-        const url = browser.runtime.getURL(`src/reader/reader.html?reminderId=${reminder.id}`);
-        browser.tabs.create({ url });
+        const url = api.runtime.getURL(`src/reader/reader.html?reminderId=${reminder.id}`);
+        api.tabs.create({ url });
     });
 
     // Mark Read Checkbox (only exists if isActive)
@@ -368,6 +277,7 @@ function createReminderCard(reminder, lastReadTs, isActive, hasBookmark = false)
     }
 
     // Edit
+    const editBtn = div.querySelector('.edit-btn');
     if (editBtn) {
         editBtn.addEventListener('click', () => {
             startEditing(reminder);
@@ -375,6 +285,7 @@ function createReminderCard(reminder, lastReadTs, isActive, hasBookmark = false)
     }
 
     // Delete
+    const delBtn = div.querySelector('.delete-btn');
     if (delBtn) {
         delBtn.addEventListener('click', () => {
             showDeleteModal(reminder.id);
@@ -388,25 +299,14 @@ function createReminderCard(reminder, lastReadTs, isActive, hasBookmark = false)
  * Adds a read mark to history
  */
 async function addReadMark(reminderId, reminderName) {
-    const { read_history } = await browser.storage.local.get('read_history');
-    const history = read_history || [];
-    history.push({ reminderId, reminderName, timestamp: Date.now() });
-    await browser.storage.local.set({ read_history: history.slice(-1000) });
+    await reminderLogic.addReadMark(reminderId, reminderName);
 }
 
 /**
  * Removes the most recent read mark for a reminder
  */
 async function removeReadMark(reminderId) {
-    const { read_history } = await browser.storage.local.get('read_history');
-    if (!read_history) return;
-
-    // Remove the most recent read for this reminder
-    const lastIndex = read_history.map(h => h.reminderId).lastIndexOf(reminderId);
-    if (lastIndex !== -1) {
-        read_history.splice(lastIndex, 1);
-        await browser.storage.local.set({ read_history });
-    }
+    await reminderLogic.removeReadMark(reminderId);
 }
 
 function startEditing(reminder) {
@@ -549,8 +449,7 @@ async function showCalendarModal(reminder) {
 }
 
 async function renderCalendar() {
-    const { read_history } = await browser.storage.local.get('read_history');
-    const history = read_history || [];
+    const history = await storage.get('read_history') || [];
 
     const reminder = currentCalendarReminder;
     const year = currentCalendarMonth.getFullYear();
@@ -620,9 +519,7 @@ async function renderCalendar() {
             statusIcon.textContent = '✓';
         } else if (isScheduled) {
             cell.classList.add('missed');
-            const circle = document.createElement('span');
-            circle.className = 'circle';
-            statusIcon.appendChild(circle);
+            statusIcon.innerHTML = '<span class="circle"></span>';
         } else {
             cell.classList.add('not-scheduled');
         }
@@ -668,86 +565,22 @@ function getScheduledDaysInMonth(timing, year, month) {
 // --- Actions ---
 
 async function toggleReminderLoacal(id, enabled) {
-    // If it's a custom reminder, we just update the 'enabled' flag.
-    // If it's a preset we copied into custom, same deal.
-    const { user_reminders } = await browser.storage.local.get('user_reminders');
-    const index = user_reminders.findIndex(r => r.id === id);
-    if (index !== -1) {
-        user_reminders[index].enabled = enabled;
-        await browser.storage.local.set({ user_reminders });
-
-        // Sync alarms
-        if (enabled) {
-            createAlarm(user_reminders[index]);
-        } else {
-            browser.alarms.clear(`reminder_${id}`);
-        }
-    }
+    await reminderLogic.toggleReminder(id, enabled);
 }
 
 async function addReminder(reminder) {
-    const { user_reminders } = await browser.storage.local.get('user_reminders');
-    const list = user_reminders || [];
-
-    // prevent dupe
-    if (!list.find(r => r.id === reminder.id)) {
-        list.push({ ...reminder, enabled: true });
-        await browser.storage.local.set({ user_reminders: list });
-        createAlarm(reminder);
-    }
+    await reminderLogic.addReminder(reminder);
 }
 
 async function updateReminder(id, data) {
-    const { user_reminders } = await browser.storage.local.get('user_reminders');
-    const index = user_reminders.findIndex(r => r.id === id);
-    if (index !== -1) {
-        user_reminders[index] = { ...user_reminders[index], ...data };
-        await browser.storage.local.set({ user_reminders });
-
-        // Re-create alarm if enabled
-        if (user_reminders[index].enabled !== false) {
-            createAlarm(user_reminders[index]);
-        }
-    }
+    await reminderLogic.updateReminder(id, data);
 }
 
 async function removeReminder(id) {
-    const { user_reminders } = await browser.storage.local.get('user_reminders');
-    const list = user_reminders || [];
-    const newList = list.filter(r => r.id !== id);
-    await browser.storage.local.set({ user_reminders: newList });
-    browser.alarms.clear(`reminder_${id}`);
+    await reminderLogic.removeReminder(id);
 }
 
-function createAlarm(reminder) {
-    // Simple wrapper to call background logic or create here
-    // Alarms can be created from popup
-    // Logic for timing needs parsing.
-    // For now:
-    console.log('Creating alarm for:', reminder.name);
-
-    // Parse time "HH:MM"
-    const [hours, minutes] = reminder.timing.time.split(':').map(Number);
-
-    let when = new Date();
-    when.setHours(hours, minutes, 0, 0);
-
-    if (when < Date.now()) {
-        when.setDate(when.getDate() + 1);
-    }
-
-    // If specific day of week (0-6)
-    if (reminder.timing.frequency === 'weekly' && reminder.timing.day !== undefined) {
-        let diff = (reminder.timing.day - when.getDay() + 7) % 7;
-        if (diff === 0 && when < Date.now()) diff = 7;
-        when.setDate(when.getDate() + diff);
-    }
-
-    browser.alarms.create(`reminder_${reminder.id}`, {
-        when: when.getTime(),
-        periodInMinutes: reminder.timing.frequency === 'daily' ? 1440 : 10080
-    });
-}
+// createAlarm logic moved to core/js/adapter/notifications.js
 
 // --- Add New Form ---
 
@@ -835,13 +668,7 @@ endAyahInput.addEventListener('input', validateAyahRange);
 
 reminderTypeSelect.addEventListener('change', async (e) => {
     const type = e.target.value;
-    targetSelect.textContent = '';
-    const loadingOpt = document.createElement('option');
-    loadingOpt.value = '';
-    loadingOpt.disabled = true;
-    loadingOpt.selected = true;
-    loadingOpt.textContent = 'جاري التحميل...';
-    targetSelect.appendChild(loadingOpt);
+    targetSelect.innerHTML = '<option value="" disabled selected>جاري التحميل...</option>';
 
     // Clear ayah range inputs and error when changing type
     startAyahInput.value = '';
@@ -858,18 +685,21 @@ reminderTypeSelect.addEventListener('change', async (e) => {
 });
 
 function populateJuz() {
-    targetSelect.textContent = '';
-    const juzOpt = document.createElement('option');
-    juzOpt.value = '';
-    juzOpt.disabled = true;
-    juzOpt.selected = true;
-    juzOpt.textContent = 'اختر الجزء';
-    targetSelect.appendChild(juzOpt);
+    targetSelect.innerHTML = '<option value="" disabled selected>اختر الجزء</option>';
     for (let i = 1; i <= 30; i++) {
         const option = document.createElement('option');
         option.value = i;
         option.text = `الجزء ${i}`;
         targetSelect.appendChild(option);
+    }
+}
+
+async function fetchSurahs() {
+    try {
+        allSurahs = await fetchAllSurahs();
+        populateTargetSelect();
+    } catch (e) {
+        console.error('Failed to load surahs:', e);
     }
 }
 
@@ -950,53 +780,17 @@ frequencySelect.addEventListener('change', (e) => {
 
 // --- API ---
 
-async function fetchSurahs() {
-    // We can fetch from quran.com API without auth for the list if public, 
-    // OR use the one we set up.
-    // The prompt says "use this api for quran text", implying usage.
-    // We'll try the public endpoint first for simplicity in popup or use cached data.
-
-    try {
-        const response = await fetch('https://api.quran.com/api/v4/chapters');
-        const data = await response.json();
-        allSurahs = data.chapters.map(c => ({
-            id: c.id,
-            name_arabic: c.name_arabic,
-            verses_count: c.verses_count
-        }));
-
-        targetSelect.textContent = '';
-        const defaultSurahOpt = document.createElement('option');
-        defaultSurahOpt.value = '';
-        defaultSurahOpt.disabled = true;
-        defaultSurahOpt.selected = true;
-        defaultSurahOpt.textContent = 'اختر السورة';
-        targetSelect.appendChild(defaultSurahOpt);
-        allSurahs.forEach(surah => {
-            const option = document.createElement('option');
-            option.value = surah.id;
-            // Use Arabic name
-            option.text = `${surah.id}. ${surah.name_arabic}`;
-            targetSelect.appendChild(option);
-        });
-    } catch (err) {
-        console.error('Failed to fetch surahs', err);
-        targetSelect.textContent = '';
-        const failOpt = document.createElement('option');
-        failOpt.value = '';
-        failOpt.textContent = 'فشل التحميل';
-        targetSelect.appendChild(failOpt);
-    }
+function populateTargetSelect() {
+    targetSelect.innerHTML = '<option value="" disabled selected>اختر السورة</option>';
+    allSurahs.forEach(surah => {
+        const option = document.createElement('option');
+        option.value = surah.id;
+        option.text = `${surah.id}. ${surah.name_arabic}`;
+        targetSelect.appendChild(option);
+    });
 }
 
-function getFrequencyLabel(timing) {
-    if (timing.frequency === 'daily') return 'يومياً';
-    if (timing.frequency === 'weekly') {
-        const days = ['الأحد', 'الاثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة', 'السبت'];
-        return `كل ${days[timing.day] || ''}`;
-    }
-    return '';
-}
+// getFrequencyLabel is now used from reminderLogic
 
 // --- Export / Import Data ---
 
@@ -1009,19 +803,15 @@ const importFileInput = document.getElementById('import-file-input');
  */
 async function exportData() {
     try {
-        const { user_reminders, read_history, bookmarks } = await browser.storage.local.get([
-            'user_reminders',
-            'read_history',
-            'bookmarks'
-        ]);
+        const data = await storage.get(['user_reminders', 'read_history', 'bookmarks']);
 
         const exportObj = {
             version: '1.0',
             exportDate: new Date().toISOString(),
             data: {
-                user_reminders: user_reminders || [],
-                read_history: read_history || [],
-                bookmarks: bookmarks || {}
+                user_reminders: data.user_reminders || [],
+                read_history: data.read_history || [],
+                bookmarks: data.bookmarks || {}
             }
         };
 
@@ -1073,7 +863,7 @@ async function importData(file) {
         }
 
         // Store all data
-        await browser.storage.local.set({
+        await storage.set({
             user_reminders: user_reminders || [],
             read_history: read_history || [],
             bookmarks: bookmarks || {}
@@ -1083,7 +873,7 @@ async function importData(file) {
         if (user_reminders && user_reminders.length > 0) {
             for (const reminder of user_reminders) {
                 if (reminder.enabled !== false && reminder.timing) {
-                    createAlarm(reminder);
+                    await notificationManager.schedule(reminder);
                 }
             }
         }
@@ -1130,7 +920,7 @@ const clearHistoryBtn = document.getElementById('clear-history');
  */
 async function clearProgressHistory() {
     try {
-        await browser.storage.local.set({ read_history: [] });
+        await storage.set({ read_history: [] });
         showAlert('تم المسح', 'تم مسح سجل الإنجاز بنجاح.');
         await loadAllReminders();
     } catch (err) {
@@ -1159,10 +949,10 @@ const resetExtensionBtn = document.getElementById('reset-extension');
 async function resetExtension() {
     try {
         // Clear all alarms first
-        await browser.alarms.clearAll();
+        await api.alarms.clearAll();
 
         // Clear all storage data
-        await browser.storage.local.clear();
+        await storage.clear();
 
         showAlert('تم إعادة الضبط', 'تم إعادة ضبط الإضافة بنجاح. سيتم تحديث الصفحة.');
 

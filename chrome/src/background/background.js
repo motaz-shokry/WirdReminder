@@ -1,5 +1,6 @@
-// src/background/background.js
 import { showNotification } from './notifications.js';
+import { storage } from '../core/js/adapter/storage.js';
+import { fetchAllSurahs } from '../core/js/api.js';
 
 // --- Initialization ---
 
@@ -7,29 +8,16 @@ chrome.runtime.onInstalled.addListener(async () => {
     console.log('Extension installed. Initializing...');
 
     // Initialize storage if empty
-    const { user_reminders } = await chrome.storage.local.get('user_reminders');
+    const user_reminders = await storage.get('user_reminders');
     if (!user_reminders) {
-        await chrome.storage.local.set({ user_reminders: [] });
+        await storage.set({ user_reminders: [] });
     }
 
-    // Fetch and store Surah metadata
-    await fetchAndStoreSurahMetadata();
+    // Fetch and store Surah metadata using core API
+    await fetchAllSurahs();
 });
 
-async function fetchAndStoreSurahMetadata() {
-    try {
-        const res = await fetch('https://api.quran.com/api/v4/chapters');
-        const data = await res.json();
-        const metadata = {};
-        data.chapters.forEach(c => {
-            metadata[c.id] = c.name_arabic;
-        });
-        await chrome.storage.local.set({ surah_metadata: metadata });
-        console.log('Surah metadata cached:', Object.keys(metadata).length, 'chapters');
-    } catch (e) {
-        console.error('Failed to cache Surah metadata:', e);
-    }
-}
+// fetchAndStoreSurahMetadata removed, handled by fetchAllSurahs()
 
 // --- Alarm Listener ---
 

@@ -1,11 +1,13 @@
-// src/background/notifications.js
+import { storage } from '../core/js/adapter/storage.js';
+
+const api = typeof browser !== 'undefined' ? browser : chrome;
 
 export async function showNotification(reminderId, notificationId) {
     try {
-        const { user_reminders } = await browser.storage.local.get('user_reminders');
+        const user_reminders = await storage.get('user_reminders');
 
         // Fetch presets
-        const url = browser.runtime.getURL('src/data/presets.json');
+        const url = api.runtime.getURL('src/core/data/presets.json');
         const response = await fetch(url);
         const presets = await response.json();
 
@@ -17,12 +19,12 @@ export async function showNotification(reminderId, notificationId) {
         // Firefox does NOT support 'buttons' or 'requireInteraction' in notifications
         const notificationOptions = {
             type: 'basic',
-            iconUrl: browser.runtime.getURL('src/assets/icons/icon128.png'),
+            iconUrl: api.runtime.getURL('src/core/assets/icons/icon128.png'),
             title: 'مُذكِّر الوِرد اليومي',
             message: reminder ? `حان وقت قراءة: ${reminder.name}` : 'حان وقت وردك اليومي!'
         };
 
-        await browser.notifications.create(notificationId, notificationOptions);
+        await api.notifications.create(notificationId, notificationOptions);
         console.log('Notification created:', notificationId);
     } catch (e) {
         console.error('Error in showNotification:', e);

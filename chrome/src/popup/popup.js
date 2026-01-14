@@ -1,4 +1,10 @@
-// src/popup/popup.js
+import { storage } from '../core/js/adapter/storage.js';
+import { fetchAllSurahs, getSurahName } from '../core/js/api.js';
+import * as reminderLogic from '../core/js/logic/reminders.js';
+import { notificationManager } from '../core/js/adapter/notifications.js';
+
+// Define cross-browser API
+const api = typeof browser !== 'undefined' ? browser : chrome;
 
 // State
 let allSurahs = [];
@@ -26,7 +32,9 @@ document.addEventListener('DOMContentLoaded', async () => {
     await loadPresetsData();
     initTabs();
     await loadAllReminders();
-    fetchSurahs();
+    // fetchSurahs() is now async via core api
+    allSurahs = await fetchAllSurahs();
+    populateTargetSelect(); // assuming we need to trigger this
 
     cancelEditBtn.addEventListener('click', () => {
         resetForm();
@@ -36,7 +44,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
 async function loadPresetsData() {
     try {
-        const response = await fetch('../data/presets.json');
+        const response = await fetch('../core/data/presets.json');
         presets = await response.json();
     } catch (e) {
         console.error('Failed to load presets:', e);
@@ -70,10 +78,10 @@ function initTabs() {
 // --- Data Loading ---
 
 async function loadAllReminders() {
-    const { user_reminders, read_history, bookmarks } = await chrome.storage.local.get(['user_reminders', 'read_history', 'bookmarks']);
-    const history = read_history || [];
-    const activeReminders = user_reminders || [];
-    const savedBookmarks = bookmarks || {};
+    const data = await storage.get(['user_reminders', 'read_history', 'bookmarks']);
+    const history = data.read_history || [];
+    const activeReminders = data.user_reminders || [];
+    const savedBookmarks = data.bookmarks || {};
 
     // 1. Render Active Reminders List
     renderActiveList(activeReminders, history, savedBookmarks);
@@ -146,50 +154,8 @@ function renderPresetsList(activeReminders, history, bookmarks) {
  * @param {Number} lastReadTs - Last read timestamp
  * @returns {Boolean} True if read in current period
  */
-function isReadInCurrentPeriod(reminder, lastReadTs) {
-    if (!lastReadTs || !reminder.timing) return false;
-
-    const now = new Date();
-    const lastRead = new Date(lastReadTs);
-    const freq = reminder.timing.frequency;
-    const [hours, minutes] = (reminder.timing.time || '00:00').split(':').map(Number);
-
-    if (freq === 'daily') {
-        // Reset daily at the scheduled time
-        const resetTime = new Date(now);
-        resetTime.setHours(hours, minutes, 0, 0);
-
-        // If we haven't passed today's reset time, use yesterday's reset
-        if (now < resetTime) {
-            resetTime.setDate(resetTime.getDate() - 1);
-        }
-
-        return lastRead >= resetTime;
-    } else if (freq === 'weekly') {
-        // Reset weekly on the scheduled day at the scheduled time
-        const scheduledDay = reminder.timing.day ?? 5; // default Friday
-        const resetTime = new Date(now);
-        resetTime.setHours(hours, minutes, 0, 0);
-
-        // Find the most recent occurrence of the scheduled day
-        const currentDay = now.getDay();
-        let daysDiff = currentDay - scheduledDay;
-        if (daysDiff < 0) daysDiff += 7;
-
-        // If today is the scheduled day but we haven't passed the time, go back a week
-        if (daysDiff === 0 && now < resetTime) {
-            daysDiff = 7;
-        }
-
-        resetTime.setDate(resetTime.getDate() - daysDiff);
-
-        return lastRead >= resetTime;
-    }
-
-    // No frequency info, treat as always valid if read recently (within 24h)
-    const oneDayAgo = new Date(now.getTime() - 24 * 60 * 60 * 1000);
-    return lastRead >= oneDayAgo;
-}
+const isReadInCurrentPeriod = reminderLogic.isReadInCurrentPeriod;
+const getFrequencyLabel = reminderLogic.getFrequencyLabel;
 
 /**
  * Unified Card Creation
@@ -287,8 +253,8 @@ function createReminderCard(reminder, lastReadTs, isActive, hasBookmark = false)
 
     // Read
     div.querySelector('.read-btn').addEventListener('click', () => {
-        const url = chrome.runtime.getURL(`src/reader/reader.html?reminderId=${reminder.id}`);
-        chrome.tabs.create({ url });
+        const url = api.runtime.getURL(`src/reader/reader.html?reminderId=${reminder.id}`);
+        api.tabs.create({ url });
     });
 
     // Mark Read Checkbox (only exists if isActive)
@@ -333,25 +299,14 @@ function createReminderCard(reminder, lastReadTs, isActive, hasBookmark = false)
  * Adds a read mark to history
  */
 async function addReadMark(reminderId, reminderName) {
-    const { read_history } = await chrome.storage.local.get('read_history');
-    const history = read_history || [];
-    history.push({ reminderId, reminderName, timestamp: Date.now() });
-    await chrome.storage.local.set({ read_history: history.slice(-1000) });
+    await reminderLogic.addReadMark(reminderId, reminderName);
 }
 
 /**
  * Removes the most recent read mark for a reminder
  */
 async function removeReadMark(reminderId) {
-    const { read_history } = await chrome.storage.local.get('read_history');
-    if (!read_history) return;
-
-    // Remove the most recent read for this reminder
-    const lastIndex = read_history.map(h => h.reminderId).lastIndexOf(reminderId);
-    if (lastIndex !== -1) {
-        read_history.splice(lastIndex, 1);
-        await chrome.storage.local.set({ read_history });
-    }
+    await reminderLogic.removeReadMark(reminderId);
 }
 
 function startEditing(reminder) {
@@ -494,8 +449,7 @@ async function showCalendarModal(reminder) {
 }
 
 async function renderCalendar() {
-    const { read_history } = await chrome.storage.local.get('read_history');
-    const history = read_history || [];
+    const history = await storage.get('read_history') || [];
 
     const reminder = currentCalendarReminder;
     const year = currentCalendarMonth.getFullYear();
@@ -611,86 +565,22 @@ function getScheduledDaysInMonth(timing, year, month) {
 // --- Actions ---
 
 async function toggleReminderLoacal(id, enabled) {
-    // If it's a custom reminder, we just update the 'enabled' flag.
-    // If it's a preset we copied into custom, same deal.
-    const { user_reminders } = await chrome.storage.local.get('user_reminders');
-    const index = user_reminders.findIndex(r => r.id === id);
-    if (index !== -1) {
-        user_reminders[index].enabled = enabled;
-        await chrome.storage.local.set({ user_reminders });
-
-        // Sync alarms
-        if (enabled) {
-            createAlarm(user_reminders[index]);
-        } else {
-            chrome.alarms.clear(`reminder_${id}`);
-        }
-    }
+    await reminderLogic.toggleReminder(id, enabled);
 }
 
 async function addReminder(reminder) {
-    const { user_reminders } = await chrome.storage.local.get('user_reminders');
-    const list = user_reminders || [];
-
-    // prevent dupe
-    if (!list.find(r => r.id === reminder.id)) {
-        list.push({ ...reminder, enabled: true });
-        await chrome.storage.local.set({ user_reminders: list });
-        createAlarm(reminder);
-    }
+    await reminderLogic.addReminder(reminder);
 }
 
 async function updateReminder(id, data) {
-    const { user_reminders } = await chrome.storage.local.get('user_reminders');
-    const index = user_reminders.findIndex(r => r.id === id);
-    if (index !== -1) {
-        user_reminders[index] = { ...user_reminders[index], ...data };
-        await chrome.storage.local.set({ user_reminders });
-
-        // Re-create alarm if enabled
-        if (user_reminders[index].enabled !== false) {
-            createAlarm(user_reminders[index]);
-        }
-    }
+    await reminderLogic.updateReminder(id, data);
 }
 
 async function removeReminder(id) {
-    const { user_reminders } = await chrome.storage.local.get('user_reminders');
-    const list = user_reminders || [];
-    const newList = list.filter(r => r.id !== id);
-    await chrome.storage.local.set({ user_reminders: newList });
-    chrome.alarms.clear(`reminder_${id}`);
+    await reminderLogic.removeReminder(id);
 }
 
-function createAlarm(reminder) {
-    // Simple wrapper to call background logic or create here
-    // Alarms can be created from popup
-    // Logic for timing needs parsing.
-    // For now:
-    console.log('Creating alarm for:', reminder.name);
-
-    // Parse time "HH:MM"
-    const [hours, minutes] = reminder.timing.time.split(':').map(Number);
-
-    let when = new Date();
-    when.setHours(hours, minutes, 0, 0);
-
-    if (when < Date.now()) {
-        when.setDate(when.getDate() + 1);
-    }
-
-    // If specific day of week (0-6)
-    if (reminder.timing.frequency === 'weekly' && reminder.timing.day !== undefined) {
-        let diff = (reminder.timing.day - when.getDay() + 7) % 7;
-        if (diff === 0 && when < Date.now()) diff = 7;
-        when.setDate(when.getDate() + diff);
-    }
-
-    chrome.alarms.create(`reminder_${reminder.id}`, {
-        when: when.getTime(),
-        periodInMinutes: reminder.timing.frequency === 'daily' ? 1440 : 10080
-    });
-}
+// createAlarm logic moved to core/js/adapter/notifications.js
 
 // --- Add New Form ---
 
@@ -881,43 +771,17 @@ frequencySelect.addEventListener('change', (e) => {
 
 // --- API ---
 
-async function fetchSurahs() {
-    // We can fetch from quran.com API without auth for the list if public, 
-    // OR use the one we set up.
-    // The prompt says "use this api for quran text", implying usage.
-    // We'll try the public endpoint first for simplicity in popup or use cached data.
-
-    try {
-        const response = await fetch('https://api.quran.com/api/v4/chapters');
-        const data = await response.json();
-        allSurahs = data.chapters.map(c => ({
-            id: c.id,
-            name_arabic: c.name_arabic,
-            verses_count: c.verses_count
-        }));
-
-        targetSelect.innerHTML = '<option value="" disabled selected>اختر السورة</option>';
-        allSurahs.forEach(surah => {
-            const option = document.createElement('option');
-            option.value = surah.id;
-            // Use Arabic name
-            option.text = `${surah.id}. ${surah.name_arabic}`;
-            targetSelect.appendChild(option);
-        });
-    } catch (err) {
-        console.error('Failed to fetch surahs', err);
-        targetSelect.innerHTML = '<option value="">فشل التحميل</option>';
-    }
+function populateTargetSelect() {
+    targetSelect.innerHTML = '<option value="" disabled selected>اختر السورة</option>';
+    allSurahs.forEach(surah => {
+        const option = document.createElement('option');
+        option.value = surah.id;
+        option.text = `${surah.id}. ${surah.name_arabic}`;
+        targetSelect.appendChild(option);
+    });
 }
 
-function getFrequencyLabel(timing) {
-    if (timing.frequency === 'daily') return 'يومياً';
-    if (timing.frequency === 'weekly') {
-        const days = ['الأحد', 'الاثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة', 'السبت'];
-        return `كل ${days[timing.day] || ''}`;
-    }
-    return '';
-}
+// getFrequencyLabel is now used from reminderLogic
 
 // --- Export / Import Data ---
 
@@ -930,19 +794,15 @@ const importFileInput = document.getElementById('import-file-input');
  */
 async function exportData() {
     try {
-        const { user_reminders, read_history, bookmarks } = await chrome.storage.local.get([
-            'user_reminders',
-            'read_history',
-            'bookmarks'
-        ]);
+        const data = await storage.get(['user_reminders', 'read_history', 'bookmarks']);
 
         const exportObj = {
             version: '1.0',
             exportDate: new Date().toISOString(),
             data: {
-                user_reminders: user_reminders || [],
-                read_history: read_history || [],
-                bookmarks: bookmarks || {}
+                user_reminders: data.user_reminders || [],
+                read_history: data.read_history || [],
+                bookmarks: data.bookmarks || {}
             }
         };
 
@@ -994,7 +854,7 @@ async function importData(file) {
         }
 
         // Store all data
-        await chrome.storage.local.set({
+        await storage.set({
             user_reminders: user_reminders || [],
             read_history: read_history || [],
             bookmarks: bookmarks || {}
@@ -1004,7 +864,7 @@ async function importData(file) {
         if (user_reminders && user_reminders.length > 0) {
             for (const reminder of user_reminders) {
                 if (reminder.enabled !== false && reminder.timing) {
-                    createAlarm(reminder);
+                    await notificationManager.schedule(reminder);
                 }
             }
         }
@@ -1051,7 +911,7 @@ const clearHistoryBtn = document.getElementById('clear-history');
  */
 async function clearProgressHistory() {
     try {
-        await chrome.storage.local.set({ read_history: [] });
+        await storage.set({ read_history: [] });
         showAlert('تم المسح', 'تم مسح سجل الإنجاز بنجاح.');
         await loadAllReminders();
     } catch (err) {
@@ -1080,10 +940,10 @@ const resetExtensionBtn = document.getElementById('reset-extension');
 async function resetExtension() {
     try {
         // Clear all alarms first
-        await chrome.alarms.clearAll();
+        await api.alarms.clearAll();
 
         // Clear all storage data
-        await chrome.storage.local.clear();
+        await storage.clear();
 
         showAlert('تم إعادة الضبط', 'تم إعادة ضبط الإضافة بنجاح. سيتم تحديث الصفحة.');
 
