@@ -4,6 +4,9 @@ import { parseVersesToPages } from './core/js/parser.js';
 import * as reminderLogic from './core/js/logic/reminders.js';
 import { env } from './core/js/adapter/env.js';
 import { notificationManager } from './core/js/adapter/notifications.js';
+import { createI18n } from './core/i18n/i18n.js';
+
+const i18n = createI18n();
 
 // Logic Delegates
 const addReminder = reminderLogic.addReminder;
@@ -62,6 +65,7 @@ const appContainer = document.getElementById('app-container');
 // INITIALIZATION
 // ============================================
 document.addEventListener('DOMContentLoaded', async () => {
+    await i18n.init();
     await checkAppVersionUpdate();
     initTabs();
     await loadPresets();
@@ -274,7 +278,7 @@ function renderActiveList(reminders, history, bookmarks) {
         myRemindersList.innerHTML = `
             <div class="empty-state">
                 <div class="empty-state-icon">📖</div>
-                <p class="empty-state-text">لا توجد تذكيرات نشطة حالياً.</p>
+                <p class="empty-state-text" data-i18n="demo.card.emptyState">${i18n.t('demo.card.emptyState')}</p>
             </div>`;
         return;
     }
@@ -669,10 +673,9 @@ async function renderCalendar() {
     const year = currentCalendarMonth.getFullYear();
     const month = currentCalendarMonth.getMonth();
 
-    const months = [
-        'يناير', 'فبراير', 'مارس', 'أبريل', 'مايو', 'يونيو',
-        'يوليو', 'أغسطس', 'سبتمبر', 'أكتوبر', 'نوفمبر', 'ديسمبر'
-    ];
+    const months = i18n.getLanguage() === 'ar' 
+        ? ['يناير', 'فبراير', 'مارس', 'أبريل', 'مايو', 'يونيو', 'يوليو', 'أغسطس', 'سبتمبر', 'أكتوبر', 'نوفمبر', 'ديسمبر']
+        : ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
     document.getElementById('calendar-title').textContent = `${months[month]} ${year}`;
 
     const completedDates = new Set();
@@ -762,7 +765,7 @@ function getScheduledDaysInMonth(timing, year, month) {
 // MODALS
 // ============================================
 function showAlert(title, message) {
-    alertTitle.textContent = title || 'تنبيه';
+    alertTitle.textContent = title || i18n.t('alert.title') || 'تنبيه';
     alertMessage.textContent = message;
     alertModal.style.display = 'flex';
 
@@ -814,15 +817,15 @@ function populateTargetSelect() {
     targetSelect.innerHTML = '';
 
     if (type === 'juz') {
-        targetSelect.innerHTML = '<option value="" disabled selected>اختر الجزء</option>';
+        targetSelect.innerHTML = `<option value="" disabled selected>${i18n.t('form.selectJuz')}</option>`;
         for (let i = 1; i <= 30; i++) {
             const option = document.createElement('option');
             option.value = i;
-            option.textContent = `الجزء ${i}`;
+            option.textContent = i18n.getLanguage() === 'ar' ? `الجزء ${i}` : `Juz ${i}`;
             targetSelect.appendChild(option);
         }
     } else {
-        targetSelect.innerHTML = '<option value="" disabled selected>اختر السورة</option>';
+        targetSelect.innerHTML = `<option value="" disabled selected>${i18n.t('form.selectSurah')}</option>`;
         allSurahs.forEach(surah => {
             const option = document.createElement('option');
             option.value = surah.id;
