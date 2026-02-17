@@ -21,7 +21,7 @@ export function Navigation() {
     >
       <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <img src="/core/assets/icons/icon48.png" alt="Wird Logo" className="w-10 h-10 rounded-xl shadow-lg" />
+          <img src="assets/icons/icon48.png" alt="Wird Logo" className="w-10 h-10 rounded-xl shadow-lg" />
           <span className="text-xl font-bold text-gray-900 dark:text-white">{t('nav.brand')}</span>
         </div>
         

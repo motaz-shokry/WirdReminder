@@ -130,7 +130,7 @@ export function HeroSection() {
                   {/* Browser Content / Extension View */}
                   <div className="relative bg-white dark:bg-gray-950 overflow-hidden group">
                     <ImageWithFallback 
-                      src="/core/assets/screenshots/reader.png"
+                      src="assets/screenshots/reader.png"
                       alt="Quran Reader Interface"
                       className="w-full h-auto object-cover transition-transform duration-700 group-hover:scale-[1.02]"
                     />

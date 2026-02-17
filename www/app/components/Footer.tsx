@@ -12,7 +12,7 @@ export function Footer() {
           {/* Brand */}
             <div>
               <div className="flex items-center gap-3 mb-4 ltr:justify-start rtl:justify-start">
-                <img src="/core/assets/icons/icon48.png" alt="Wird Logo" className="w-10 h-10 rounded-xl" />
+                <img src="assets/icons/icon48.png" alt="Wird Logo" className="w-10 h-10 rounded-xl" />
                 <span className="text-xl font-bold">{t('nav.brand')}</span>
               </div>
               <p className="text-gray-400 leading-relaxed font-medium">

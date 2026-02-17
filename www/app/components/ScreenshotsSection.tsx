@@ -9,27 +9,27 @@ export function ScreenshotsSection() {
     {
       title: t('screenshots.list.list.title'),
       description: t('screenshots.list.list.desc'),
-      image: '/core/assets/screenshots/list.png'
+      image: 'assets/screenshots/list.png'
     },
     {
       title: t('screenshots.list.reader.title'),
       description: t('screenshots.list.reader.desc'),
-      image: '/core/assets/screenshots/reader.png'
+      image: 'assets/screenshots/reader.png'
     },
     {
       title: t('screenshots.list.add.title'),
       description: t('screenshots.list.add.desc'),
-      image: '/core/assets/screenshots/add.png'
+      image: 'assets/screenshots/add.png'
     },
     {
       title: t('screenshots.list.calendar.title'),
       description: t('screenshots.list.calendar.desc'),
-      image: '/core/assets/screenshots/calendar.png'
+      image: 'assets/screenshots/calendar.png'
     },
     {
       title: t('screenshots.list.settings.title'),
       description: t('screenshots.list.settings.desc'),
-      image: '/core/assets/screenshots/settings.png'
+      image: 'assets/screenshots/settings.png'
     }
   ];
 
