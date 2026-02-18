@@ -2,6 +2,7 @@
 // Pure DOM manipulation for Mushaf-style display
 
 import { shouldCenterLine, findSurahGap } from './parser.js';
+import { ReflectionStorage } from './adapter/storage.js';
 
 /**
  * Creates a word element (span) with appropriate styling
@@ -13,12 +14,13 @@ export function createWordElement(word) {
     const text = word.text_qpc_hafs || word.text_uthmani;
     span.textContent = text;
 
+    span.dataset.verseKey = word.verse_key;
+
     if (word.char_type_name === 'end') {
         span.className = 'ayah-symbol';
     } else {
         span.className = 'mushaf-word';
         // Add data attributes for bookmark identification
-        span.dataset.verseKey = word.verse_key;
         span.dataset.wordPosition = word.position;
     }
 
@@ -201,4 +203,34 @@ export function showError(msg, container) {
             <p>${msg}</p>
         </div>
     `;
+}
+
+/**
+ * Decorates ayah elements inside a container with a visual indicator
+ * if a reflection exists for that specific verse.
+ *
+ * Expected format of `data-verse-key`:
+ *   "surah:ayah"  (e.g., "2:155")
+ *
+ * @param {HTMLElement} container - Root DOM element containing ayah elements
+ * @returns {Promise<void>} Resolves when decoration process is complete
+ */
+export async function decorateReflections(container) {
+    const reflections = await ReflectionStorage.getAll();
+    
+    container.querySelectorAll('.reflection-indicator').forEach(el => el.remove());
+
+    if (!reflections || reflections.length === 0) return;
+
+    const reflectedKeys = new Set(reflections.map(r => `${r.surah}:${r.ayah}`));
+
+    container.querySelectorAll('.ayah-symbol').forEach(symbol => {
+        const verseKey = symbol.dataset.verseKey; 
+        if (reflectedKeys.has(verseKey)) {
+            const indicator = document.createElement('span');
+            indicator.className = 'reflection-indicator';
+            indicator.innerHTML = '📝';
+            symbol.appendChild(indicator);
+        }
+    });
 }

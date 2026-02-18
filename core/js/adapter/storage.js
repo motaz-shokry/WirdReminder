@@ -147,14 +147,22 @@ export const ReflectionStorage = {
      */
     async save(reflection) {
         const all = await this.getAll();
-        const index = all.findIndex(r => r.surah === reflection.surah && r.ayah === reflection.ayah);
+        const s = parseInt(reflection.surah);
+        const a = parseInt(reflection.ayah);
+        const index = all.findIndex(r => r.surah === s && r.ayah === a);
 
         if (index > -1) {
-            all[index] = { ...all[index], ...reflection, updatedAt: new Date().toISOString() };
+            all[index] = {
+                ...all[index],
+                text: reflection.text,
+                updatedAt: new Date().toISOString()
+            };
         } else {
             all.push({
-                ...reflection,
-                id: `ref_${Date.now()}_${reflection.surah}_${reflection.ayah}`,
+                id: `ref_${Date.now()}_${s}_${a}`,
+                surah: s,
+                ayah: a,
+                text: reflection.text,
                 createdAt: new Date().toISOString(),
                 updatedAt: new Date().toISOString()
             });
