@@ -10,7 +10,7 @@
     "postversion": "node scripts/version-sync.js",
     "sync": "node scripts/sync.js",
     "build": "node scripts/build.js",
-    "android:refresh": "npm run sync && ANDROID_HOME=/home/hadi/Android/Sdk npx cap run android",
+    "android:refresh": "npm run sync && npx cap run android",
     "android:build": "cd android && ./gradlew assembleDebug",
     "android:build:release": "cd android && ./gradlew bundleRelease",
     "sign:android": "bash scripts/sign-release-bundle.sh",
