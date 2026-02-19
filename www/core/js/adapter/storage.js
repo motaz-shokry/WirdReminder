@@ -53,18 +53,13 @@ export const storage = {
      * @returns {Promise<void>}
      */
     async set(items) {
-        if (typeof chrome !== 'undefined' && chrome.storage && chrome.storage.local) {
-            return new Promise((resolve) => {
-                chrome.storage.local.set(items, () => {
-                    resolve();
-                });
+        const api = typeof browser !== 'undefined' ? browser : chrome;
+        return new Promise((resolve, reject) => {
+            api.storage.local.set(items, () => {
+                if (chrome.runtime.lastError) reject(chrome.runtime.lastError);
+                else resolve();
             });
-        } else {
-            // Web / LocalStorage fallback
-            Object.keys(items).forEach(key => {
-                localStorage.setItem(key, JSON.stringify(items[key]));
-            });
-        }
+        });
     },
 
     /**

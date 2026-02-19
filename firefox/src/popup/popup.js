@@ -810,15 +810,16 @@ const importFileInput = document.getElementById('import-file-input');
  */
 async function exportData() {
     try {
-        const data = await storage.get(['user_reminders', 'read_history', 'bookmarks']);
+        const data = await storage.get(['user_reminders', 'read_history', 'bookmarks', 'quran_reflections']);
 
         const exportObj = {
-            version: '1.0',
+            version: '1.1',
             exportDate: new Date().toISOString(),
             data: {
                 user_reminders: data.user_reminders || [],
                 read_history: data.read_history || [],
-                bookmarks: data.bookmarks || {}
+                bookmarks: data.bookmarks || {},
+                quran_reflections: data.quran_reflections || []
             }
         };
 
@@ -836,10 +837,10 @@ async function exportData() {
         document.body.removeChild(a);
         URL.revokeObjectURL(url);
 
-        showAlert('تم التصدير', 'تم تصدير بياناتك بنجاح.');
+        showAlert('تم التصدير', 'صُدرت بياناتك بنجاح.');
     } catch (err) {
         console.error('Export failed:', err);
-        showAlert('خطأ', 'فشل تصدير البيانات.');
+        showAlert('خطأ', 'فشل تصدير بياناتك.');
     }
 }
 
@@ -856,7 +857,7 @@ async function importData(file) {
             throw new Error('Invalid backup format: missing data object');
         }
 
-        const { user_reminders, read_history, bookmarks } = importObj.data;
+        const { user_reminders, read_history, bookmarks, quran_reflections } = importObj.data;
 
         // Type validations
         if (user_reminders !== undefined && !Array.isArray(user_reminders)) {
@@ -868,12 +869,16 @@ async function importData(file) {
         if (bookmarks !== undefined && typeof bookmarks !== 'object') {
             throw new Error('Invalid format: bookmarks should be an object');
         }
+        if (quran_reflections !== undefined && !Array.isArray(quran_reflections)) {
+            throw new Error('Invalid format: quran_reflections should be an array');
+        }
 
         // Store all data
         await storage.set({
             user_reminders: user_reminders || [],
             read_history: read_history || [],
-            bookmarks: bookmarks || {}
+            bookmarks: bookmarks || {},
+            quran_reflections: quran_reflections || []
         });
 
         // Re-create alarms for imported reminders
@@ -885,16 +890,15 @@ async function importData(file) {
             }
         }
 
-        showAlert('تم الاستيراد', 'تم استيراد بياناتك بنجاح.');
+        showAlert('تم الاستيراد', 'استعيدت كافة البيانات. ستحدث الواجهة الآن.');
+        // window.location.reload();
+
         await loadAllReminders();
 
     } catch (err) {
         console.error('Import failed:', err);
-        if (err instanceof SyntaxError) {
-            showAlert('خطأ', 'الملف غير صالح. تأكد من أنه ملف JSON صحيح.');
-        } else {
-            showAlert('خطأ', err.message || 'فشل استيراد البيانات.');
-        }
+        const errorMsg = err instanceof SyntaxError ? 'الملف ليس بتنسيق JSON صحيح.' : err.message;
+            showAlert('خطأ في الاستيراد', errorMsg);
     }
 }
 
