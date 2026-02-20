@@ -1,11 +1,13 @@
 import { fetchSurahVerses, fetchAyahRange, fetchJuzVerses, getSurahName } from '../core/js/api.js';
 import { parseVersesToPages } from '../core/js/parser.js';
-import { renderPages, showError } from '../core/js/renderer.js';
+import { renderPages, showError, decorateReflections } from '../core/js/renderer.js';
 import { storage } from '../core/js/adapter/storage.js';
 import * as reminderLogic from '../core/js/logic/reminders.js';
+import { ReflectionStorage } from '../core/js/adapter/storage.js';
 import { themeManager } from '../core/js/theme.js';
 
 let currentReminderId = null;
+let targetAyahKey = null; // For scrolling to ayah
 
 document.addEventListener('DOMContentLoaded', async () => {
     // Initialize theme toggle in reader
@@ -17,14 +19,20 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     const params = new URLSearchParams(window.location.search);
     currentReminderId = params.get('reminderId');
+
+    const surahId = params.get('surahId');
+    const targetAyah = params.get('targetAyah');
+
     const container = document.getElementById('content-area');
 
-    if (!currentReminderId) {
-        showError('لم يتم تحديد الورد', container);
-        return;
+    if (currentReminderId) {
+        await loadReminderContent(currentReminderId, container);
+    } else if (surahId) {
+        targetAyahKey = `${surahId}:${targetAyah}`;
+        await loadReflectionContext(surahId, container);
+    } else {
+        showError('لم يُحدد محتوى للعرض', container);
     }
-
-    await loadReminderContent(currentReminderId, container);
 });
 
 /**
@@ -48,14 +56,88 @@ async function loadReminderContent(id, container) {
             await renderMarkReadButtons(container, reminder);
         }
 
-        setupBookmarkHandlers(container);
+        setupInteractionHandlers(container);
+        await decorateReflections(container);
+
         await restoreBookmark(container);
-        // Note: logReadAction is now triggered manually via button
 
     } catch (e) {
         console.error(e);
         showError('حدث خطأ أثناء تحميل المحتوى', container);
     }
+}
+
+function setupInteractionHandlers(container) {
+    container.addEventListener('click', async (e) => {
+        const wordEl = e.target.closest('.mushaf-word');
+        if (wordEl) {
+            const verseKey = wordEl.dataset.verseKey;
+            const wordPosition = wordEl.dataset.wordPosition;
+
+            const isCurrentlyBookmarked = wordEl.classList.contains('bookmarked');
+
+            container.querySelectorAll('.mushaf-word.bookmarked').forEach(el => {
+                el.classList.remove('bookmarked');
+            });
+
+            if (isCurrentlyBookmarked) {
+                await removeBookmark();
+            } else {
+                wordEl.classList.add('bookmarked');
+                await saveBookmark(verseKey, wordPosition);
+            }
+            return;
+        }
+
+        const symbolEl = e.target.closest('.ayah-symbol');
+        if (symbolEl) {
+            const verseKey = symbolEl.dataset.verseKey; // format "1:5"
+            const [s, a] = verseKey.split(':');
+            openReflectionModal(s, a, container);
+        }
+    });
+}
+
+async function openReflectionModal(surah, ayah, container) {
+    const existing = await ReflectionStorage.getByAyah(surah, ayah);
+
+    const overlay = document.createElement('div');
+    overlay.className = 'modal-overlay';
+    overlay.innerHTML = `
+        <div class="modal-content" dir="auto">
+            <h2 style="font-family:Tajawal; font-size:1.1rem; margin-top:0; color:var(--primary-color)">
+                ${existing ? 'عدّل تدبرك' : 'تدبر جديد'}: سورة ${surah}، آية ${ayah}
+            </h2>
+            <textarea id="ref-input" class="reflection-textarea" 
+                placeholder="اكتب تدبرك هنا...">${existing ? existing.text : ''}</textarea>
+            
+            <div style="display:flex; gap:10px; justify-content:flex-end">
+                <button class="mark-read-btn" id="save-ref" style="padding:8px 20px">حفظ</button>
+                <button class="mark-read-btn" id="close-ref" style="border-color:#ccc; color:#666; padding:8px 20px">إلغاء</button>
+            </div>
+        </div>
+    `;
+
+    document.body.appendChild(overlay);
+
+    const textarea = overlay.querySelector('#ref-input');
+    textarea.focus();
+    textarea.setSelectionRange(textarea.value.length, textarea.value.length);
+
+    // Save logic
+    overlay.querySelector('#save-ref').onclick = async () => {
+        const text = textarea.value.trim();
+        if (text) {
+            await ReflectionStorage.save({ surah, ayah, text });
+        } else {
+            // Delete if text removed and save button pressed
+            await ReflectionStorage.delete(surah, ayah);
+        }
+        overlay.remove();
+        await decorateReflections(container);
+    };
+
+    overlay.querySelector('#close-ref').onclick = () => overlay.remove();
 }
 
 async function findReminder(id) {
@@ -204,33 +286,33 @@ async function renderMarkReadButtons(container, reminder) {
  * Sets up click handlers for all mushaf words to enable bookmarking
  * @param {HTMLElement} container - Container element
  */
-function setupBookmarkHandlers(container) {
-    const words = container.querySelectorAll('.mushaf-word');
-
-    words.forEach(word => {
-        word.addEventListener('click', async () => {
-            const verseKey = word.dataset.verseKey;
-            const wordPosition = word.dataset.wordPosition;
-
-            // Check if this word is already bookmarked
-            const isCurrentlyBookmarked = word.classList.contains('bookmarked');
-
-            // Remove any existing bookmark
-            container.querySelectorAll('.mushaf-word.bookmarked').forEach(el => {
-                el.classList.remove('bookmarked');
-            });
-
-            if (isCurrentlyBookmarked) {
-                // Toggle off - remove bookmark
-                await removeBookmark();
-            } else {
-                // Toggle on - add bookmark
-                word.classList.add('bookmarked');
-                await saveBookmark(verseKey, wordPosition);
-            }
-        });
-    });
-}
+// function setupBookmarkHandlers(container) {
+//     const words = container.querySelectorAll('.mushaf-word');
+//
+//     words.forEach(word => {
+//         word.addEventListener('click', async () => {
+//             const verseKey = word.dataset.verseKey;
+//             const wordPosition = word.dataset.wordPosition;
+//
+//             // Check if this word is already bookmarked
+//             const isCurrentlyBookmarked = word.classList.contains('bookmarked');
+//
+//             // Remove any existing bookmark
+//             container.querySelectorAll('.mushaf-word.bookmarked').forEach(el => {
+//                 el.classList.remove('bookmarked');
+//             });
+//
+//             if (isCurrentlyBookmarked) {
+//                 // Toggle off - remove bookmark
+//                 await removeBookmark();
+//             } else {
+//                 // Toggle on - add bookmark
+//                 word.classList.add('bookmarked');
+//                 await saveBookmark(verseKey, wordPosition);
+//             }
+//         });
+//     });
+// }
 
 async function saveBookmark(verseKey, wordPosition) {
     const bookmarks = await storage.get('bookmarks') || {};
@@ -266,3 +348,48 @@ async function restoreBookmark(container) {
     }
 }
 
+async function loadReflectionContext(surahId, container) {
+    try {
+        await renderSurah(surahId, container);
+
+        setupInteractionHandlers(container);
+        await decorateReflections(container);
+
+        if (targetAyahKey) {
+            scrollToTargetAyah(container);
+        }
+    } catch (e) {
+        console.error(e);
+        showError('حدث خطأ أثناء تحميل السورة', container);
+    }
+}
+
+function scrollToTargetAyah(container) {
+    setTimeout(() => {
+        const ayahSymbol = container.querySelector(`.ayah-symbol[data-verse-key="${targetAyahKey}"]`);
+
+        if (ayahSymbol) {
+            ayahSymbol.scrollIntoView({ behavior: 'smooth', block: 'center' });
+
+            const parentPage = ayahSymbol.closest('.mushaf-page');
+            if (parentPage) {
+                const words = parentPage.querySelectorAll(`.mushaf-word[data-verse-key="${targetAyahKey}"]`);
+
+                words.forEach(w => {
+                    w.dataset.originalColor = w.style.color || '';
+
+                    w.style.transition = 'color 0.5s ease';
+                    w.style.color = 'var(--primary-color)';
+                    w.style.fontWeight = 'bold';
+                });
+
+                setTimeout(() => {
+                    words.forEach(w => {
+                        w.style.color = w.dataset.originalColor;
+                        w.style.fontWeight = 'normal';
+                    });
+                }, 3000);
+            }
+        }
+    }, 500);
+}

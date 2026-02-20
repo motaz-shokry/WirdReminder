@@ -2,6 +2,8 @@ import { storage } from '../core/js/adapter/storage.js';
 import { fetchAllSurahs, getSurahName } from '../core/js/api.js';
 import * as reminderLogic from '../core/js/logic/reminders.js';
 import { notificationManager } from '../core/js/adapter/notifications.js';
+import { ReflectionStorage } from '../core/js/adapter/storage.js';
+import { filterReflections, sortReflections } from '../core/js/logic/reflections.js'
 import { themeManager } from '../core/js/theme.js';
 
 // Define cross-browser API
@@ -36,7 +38,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         const toggleButton = themeManager.createToggleButton();
         themeToggleContainer.appendChild(toggleButton);
     }
-    
+
     await loadPresetsData();
     initTabs();
     await loadAllReminders();
@@ -63,8 +65,9 @@ async function loadPresetsData() {
 function initTabs() {
     console.log('Initializing tabs...', tabs.length);
     tabs.forEach((tab, index) => {
-        tab.addEventListener('click', () => {
+        tab.addEventListener('click', async () => {
             console.log('Tab clicked:', tab.dataset.tab);
+
             tabs.forEach(t => t.classList.remove('active'));
             tabContents.forEach(c => c.classList.remove('active'));
 
@@ -78,6 +81,10 @@ function initTabs() {
             // If switching AWAY from add-new while editing, reset form
             if (target !== 'add-new' && editIdInput?.value) {
                 resetForm();
+            }
+
+            if (target === 'reflections-tab') {
+                await loadReflectionsJournal();
             }
         });
     });
@@ -811,15 +818,16 @@ const importFileInput = document.getElementById('import-file-input');
  */
 async function exportData() {
     try {
-        const data = await storage.get(['user_reminders', 'read_history', 'bookmarks']);
+        const data = await storage.get(['user_reminders', 'read_history', 'bookmarks', 'quran_reflections']);
 
         const exportObj = {
-            version: '1.0',
+            version: '1.1',
             exportDate: new Date().toISOString(),
             data: {
                 user_reminders: data.user_reminders || [],
                 read_history: data.read_history || [],
-                bookmarks: data.bookmarks || {}
+                bookmarks: data.bookmarks || {},
+                quran_reflections: data.quran_reflections || []
             }
         };
 
@@ -837,10 +845,10 @@ async function exportData() {
         document.body.removeChild(a);
         URL.revokeObjectURL(url);
 
-        showAlert('تم التصدير', 'تم تصدير بياناتك بنجاح.');
+        showAlert('تم التصدير', 'صُدرت بياناتك بنجاح.');
     } catch (err) {
         console.error('Export failed:', err);
-        showAlert('خطأ', 'فشل تصدير البيانات.');
+        showAlert('خطأ', 'فشل تصدير بياناتك.');
     }
 }
 
@@ -857,7 +865,7 @@ async function importData(file) {
             throw new Error('Invalid backup format: missing data object');
         }
 
-        const { user_reminders, read_history, bookmarks } = importObj.data;
+        const { user_reminders, read_history, bookmarks, quran_reflections } = importObj.data;
 
         // Type validations
         if (user_reminders !== undefined && !Array.isArray(user_reminders)) {
@@ -869,12 +877,16 @@ async function importData(file) {
         if (bookmarks !== undefined && typeof bookmarks !== 'object') {
             throw new Error('Invalid format: bookmarks should be an object');
         }
+        if (quran_reflections !== undefined && !Array.isArray(quran_reflections)) {
+            throw new Error('Invalid format: quran_reflections should be an array');
+        }
 
         // Store all data
         await storage.set({
             user_reminders: user_reminders || [],
             read_history: read_history || [],
-            bookmarks: bookmarks || {}
+            bookmarks: bookmarks || {},
+            quran_reflections: quran_reflections || []
         });
 
         // Re-create alarms for imported reminders
@@ -886,16 +898,15 @@ async function importData(file) {
             }
         }
 
-        showAlert('تم الاستيراد', 'تم استيراد بياناتك بنجاح.');
+        showAlert('تم الاستيراد', 'استعيدت كافة البيانات. ستحدث الواجهة الآن.');
+        // window.location.reload();
+
         await loadAllReminders();
 
     } catch (err) {
         console.error('Import failed:', err);
-        if (err instanceof SyntaxError) {
-            showAlert('خطأ', 'الملف غير صالح. تأكد من أنه ملف JSON صحيح.');
-        } else {
-            showAlert('خطأ', err.message || 'فشل استيراد البيانات.');
-        }
+        const errorMsg = err instanceof SyntaxError ? 'الملف ليس بتنسيق JSON صحيح.' : err.message;
+            showAlert('خطأ في الاستيراد', errorMsg);
     }
 }
 
@@ -1029,3 +1040,72 @@ function showConfirmModal(title, message, onConfirm) {
         }
     };
 }
+
+async function loadReflectionsJournal(filter = '') {
+    const listContainer = document.getElementById('reflections-journal-list');
+    const reflections = await ReflectionStorage.getAll();
+
+    const sorted = sortReflections(reflections, "date");
+    const filtered = filterReflections(sorted, filter);
+
+    if (filtered.length === 0) {
+        listContainer.innerHTML = `
+            <div class="empty-state">
+                <div class="empty-state-icon">📝</div>
+                <div class="empty-state-text">${filter ? 'لا توجد نتائج' : 'سجل تدبرك فارغ'}</div>
+            </div>`;
+        return;
+    }
+
+    listContainer.innerHTML = '';
+
+    for (const ref of filtered) {
+        const surahName = await getSurahName(parseInt(ref.surah));
+        const card = document.createElement('div');
+
+        card.className = 'reminder-card reflection-card';
+        card.innerHTML = `
+            <div class="card-header">
+                <div class="reflection-info-wrapper">
+                    <div class="card-title">سورة ${surahName}</div>
+                    <div class="card-description">آية رقم ${ref.ayah}</div>
+                </div>
+                <button class="btn btn-ghost btn-destructive delete-ref" title="حذف">حذف</button>
+            </div>
+            <div class="reflection-body">
+                <p class="reflection-text">${ref.text}</p>
+            </div>
+            <div class="card-actions">
+                <span class="card-description">${new Date(ref.updatedAt).toLocaleDateString('en-US')}</span>
+                <div class="btn-group">
+                    <button class="btn btn-outline" style="height: 1.5rem; font-size: 0.7rem;">انتقل للمصحف ←</button>
+                </div>
+            </div>
+        `;
+
+        const openInMushaf = () => {
+            const url = api.runtime.getURL(`src/reader/reader.html?surahId=${ref.surah}&targetAyah=${ref.ayah}`);
+            api.tabs.create({ url });
+        };
+        card.querySelector('.btn-group').onclick = openInMushaf;
+
+        card.querySelector('.delete-ref').onclick = (e) => {
+            e.stopPropagation();
+
+            showConfirmModal(
+                'حذف تدبر',
+                `هل متأكد من حذف تدبر الآية ${ref.ayah} من سورة ${surahName}؟`,
+                async () => {
+                    await ReflectionStorage.delete(ref.surah, ref.ayah);
+                    await loadReflectionsJournal(filter);
+                }
+            );
+        };
+
+        listContainer.appendChild(card);
+    }
+}
+
+document.getElementById('ref-search').addEventListener('input', (e) => {
+    loadReflectionsJournal(e.target.value);
+});
