@@ -4,11 +4,19 @@ import { renderPages, showError, decorateReflections } from '../core/js/renderer
 import { storage } from '../core/js/adapter/storage.js';
 import * as reminderLogic from '../core/js/logic/reminders.js';
 import { ReflectionStorage } from '../core/js/adapter/storage.js';
+import { themeManager } from '../core/js/theme.js';
 
 let currentReminderId = null;
 let targetAyahKey = null; // For scrolling to ayah
 
 document.addEventListener('DOMContentLoaded', async () => {
+    // Initialize theme toggle in reader
+    const themeToggleContainer = document.getElementById('theme-toggle-container');
+    if (themeToggleContainer) {
+        const toggleButton = themeManager.createToggleButton();
+        themeToggleContainer.appendChild(toggleButton);
+    }
+
     const params = new URLSearchParams(window.location.search);
     currentReminderId = params.get('reminderId');
 
@@ -343,7 +351,7 @@ async function restoreBookmark(container) {
 async function loadReflectionContext(surahId, container) {
     try {
         await renderSurah(surahId, container);
-        
+
         setupInteractionHandlers(container);
         await decorateReflections(container);
 
@@ -359,22 +367,22 @@ async function loadReflectionContext(surahId, container) {
 function scrollToTargetAyah(container) {
     setTimeout(() => {
         const ayahSymbol = container.querySelector(`.ayah-symbol[data-verse-key="${targetAyahKey}"]`);
-        
+
         if (ayahSymbol) {
             ayahSymbol.scrollIntoView({ behavior: 'smooth', block: 'center' });
-            
+
             const parentPage = ayahSymbol.closest('.mushaf-page');
             if (parentPage) {
                 const words = parentPage.querySelectorAll(`.mushaf-word[data-verse-key="${targetAyahKey}"]`);
-                
+
                 words.forEach(w => {
-                    w.dataset.originalColor = w.style.color || ''; 
-                    
+                    w.dataset.originalColor = w.style.color || '';
+
                     w.style.transition = 'color 0.5s ease';
-                    w.style.color = 'var(--primary-color)'; 
+                    w.style.color = 'var(--primary-color)';
                     w.style.fontWeight = 'bold';
                 });
-                
+
                 setTimeout(() => {
                     words.forEach(w => {
                         w.style.color = w.dataset.originalColor;

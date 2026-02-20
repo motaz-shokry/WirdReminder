@@ -10,6 +10,7 @@
     <link
         href="https://fonts.googleapis.com/css2?family=Amiri:ital,wght@0,400;0,700;1,400&family=Tajawal:wght@300;400;500;700&display=swap"
         rel="stylesheet">
+    <link rel="stylesheet" href="../core/css/theme-toggle.css">
     <style>
         @font-face {
             font-family: 'UthmanicHafs';
@@ -26,10 +27,40 @@
         :root {
             --primary-color: #059669;
             --bg-color: #fcfbf9;
-            /* Slightly warmer paper color */
             --text-color: #1F2937;
+            --card-bg: #ffffff;
+            --card-border: #e5e7eb;
+            --card-shadow: rgba(0, 0, 0, 0.05);
+            --surah-header-color: #222;
+            --basmala-color: #111;
+            --page-footer-border: #eee;
+            --page-footer-color: #999;
+            --loading-color: #666;
             --mushaf-width: 600px;
             --mushaf-line-height: 55px;
+            --bookmark-bg: rgba(5, 150, 105, 0.15);
+            --bookmark-shadow: rgba(5, 150, 105, 0.3);
+            --btn-hover-bg: #047857;
+            --overlay-bg: rgba(0, 0, 0, 0.4);
+        }
+
+        /* Dark Mode */
+        .dark {
+            --primary-color: #34d399;
+            --bg-color: hsl(222.2, 84%, 4.9%);
+            --text-color: hsl(210, 40%, 98%);
+            --card-bg: hsl(222.2, 84%, 7%);
+            --card-border: hsl(217.2, 32.6%, 17.5%);
+            --card-shadow: rgba(0, 0, 0, 0.3);
+            --surah-header-color: hsl(210, 40%, 90%);
+            --basmala-color: hsl(210, 40%, 90%);
+            --page-footer-border: hsl(217.2, 32.6%, 17.5%);
+            --page-footer-color: hsl(215, 20.2%, 55%);
+            --loading-color: hsl(215, 20.2%, 65.1%);
+            --bookmark-bg: rgba(52, 211, 153, 0.15);
+            --bookmark-shadow: rgba(52, 211, 153, 0.3);
+            --btn-hover-bg: #059669;
+            --overlay-bg: rgba(0, 0, 0, 0.4);
         }
 
         body {
@@ -41,17 +72,27 @@
             display: flex;
             justify-content: center;
             min-height: 100vh;
+            transition: background-color 0.3s ease, color 0.3s ease;
         }
 
         .container {
             width: 100%;
             max-width: var(--mushaf-width);
-            background: white;
+            background: var(--card-bg);
             padding: 60px 50px;
             border-radius: 4px;
-            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.05), 0 2px 5px rgba(0, 0, 0, 0.03);
+            box-shadow: 0 10px 25px var(--card-shadow), 0 2px 5px var(--card-shadow);
             position: relative;
-            border: 1px solid #e5e7eb;
+            border: 1px solid var(--card-border);
+            transition: background-color 0.3s ease, border-color 0.3s ease;
+        }
+
+        /* Theme toggle in top-left corner */
+        .reader-theme-toggle {
+            position: fixed;
+            top: 12px;
+            left: 12px;
+            z-index: 100;
         }
 
         h1 {
@@ -78,6 +119,7 @@
             font-size: 32px;
             white-space: nowrap;
             font-family: 'UthmanicHafs', serif;
+            color: var(--text-color);
         }
 
         .mushaf-line.centered {
@@ -89,7 +131,6 @@
             display: inline-flex;
             align-items: center;
             user-select: text;
-            /* Allow text selection */
             cursor: pointer;
             transition: color 0.2s;
         }
@@ -99,11 +140,11 @@
         }
 
         .mushaf-word.bookmarked {
-            background: linear-gradient(135deg, rgba(5, 150, 105, 0.15), rgba(5, 150, 105, 0.25));
+            background: var(--bookmark-bg);
             border-radius: 4px;
             padding: 2px 4px;
             margin: -2px -4px;
-            box-shadow: 0 0 0 2px rgba(5, 150, 105, 0.3);
+            box-shadow: 0 0 0 2px var(--bookmark-shadow);
         }
 
         .surah-header {
@@ -115,7 +156,7 @@
             align-items: center;
             gap: 20px;
             margin: 20px 0;
-            color: #222;
+            color: var(--surah-header-color);
         }
 
         .ayah-symbol {
@@ -136,12 +177,12 @@
 
         .ayah-symbol:hover {
             transform: scale(1.2);
-            filter: drop-shadow(0 0 2px rgba(5, 150, 105, 0.3));
+            filter: drop-shadow(0 0 2px var(--bookmark-shadow));
         }
 
         .loading {
             font-family: 'Tajawal', sans-serif;
-            color: #666;
+            color: var(--loading-color);
             margin-top: 50px;
             text-align: center;
             width: 100%;
@@ -152,7 +193,7 @@
             font-size: 32px;
             margin: 20px 0;
             text-align: center;
-            color: #111;
+            color: var(--basmala-color);
         }
 
         .reflection-indicator {
@@ -168,7 +209,7 @@
         .modal-overlay {
             position: fixed;
             inset: 0;
-            background: rgba(0, 0, 0, 0.4);
+            background: var(--overlay-bg);
             backdrop-filter: blur(4px);
             z-index: 2000;
             display: flex;
@@ -182,7 +223,7 @@
             max-width: 450px;
             padding: 25px;
             border-radius: 12px;
-            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
+            box-shadow: 0 20px 25px -5px var(--overlay-bg);
         }
 
         .reflection-textarea {
@@ -204,7 +245,7 @@
             border-top: 1px solid #eee;
             font-family: 'Tajawal', sans-serif;
             font-size: 14px;
-            color: #999;
+            color: var(--page-footer-color);
             display: flex;
             justify-content: space-between;
         }
@@ -265,20 +306,13 @@
         }
 
         .mark-read-btn.marked:hover {
-            background: #047857;
-            border-color: #047857;
+            background: var(--btn-hover-bg);
+            border-color: var(--btn-hover-bg);
         }
 
         .mark-read-btn .btn-hint {
             font-size: 0.75rem;
             opacity: 0.8;
-        }
-
-        /* Bookmarked word style */
-        .mushaf-word.bookmarked {
-            background: rgba(5, 150, 105, 0.15);
-            border-radius: 4px;
-            padding: 2px 4px;
         }
     </style>
 </head>
