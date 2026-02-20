@@ -5,24 +5,6 @@
 /* Import fonts */
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Tajawal:wght@400;500;700&display=swap');
 
-/* Custom Quran Fonts - loaded from local files for offline/app support */
-@font-face {
-    font-family: 'UthmanicHafs';
-    src: url('core/assets/fonts/UthmanicHafs.woff2') format('woff2');
-    font-weight: normal;
-    font-style: normal;
-    font-display: swap;
-}
-
-@font-face {
-    font-family: 'SurahNames';
-    src: url('core/assets/fonts/SurahNames.woff2') format('woff2');
-    font-weight: normal;
-    font-style: normal;
-    font-display: swap;
-}
-
-
 /* CSS VARIABLES */
 :root {
     --background: 0 0% 100%;
@@ -52,58 +34,24 @@
     --card-gap: 0.75rem;
     --input-gap: 1rem;
     --header-padding: 1rem 1.25rem;
-    --tabs-height: 64px;
-}
-
-/* Dark Mode Variables */
-.dark {
-    --background: 222.2 84% 4.9%;
-    --foreground: 210 40% 98%;
-    --card: 222.2 84% 4.9%;
-    --card-foreground: 210 40% 98%;
-    --popover: 222.2 84% 4.9%;
-    --popover-foreground: 210 40% 98%;
-    --primary: 221.2 83.2% 53.3%;
-    --primary-foreground: 210 40% 98%;
-    --secondary: 217.2 32.6% 17.5%;
-    --secondary-foreground: 210 40% 98%;
-    --muted: 217.2 32.6% 17.5%;
-    --muted-foreground: 215 20.2% 65.1%;
-    --accent: 217.2 32.6% 17.5%;
-    --accent-foreground: 210 40% 98%;
-    --destructive: 0 62.8% 30.6%;
-    --destructive-foreground: 210 40% 98%;
-    --border: 217.2 32.6% 17.5%;
-    --input: 217.2 32.6% 17.5%;
-    --ring: 221.2 83.2% 53.3%;
-    --quran-green: 142.1 70.6% 45.3%;
-    --overlay: 210 40% 98%;
+    --tabs-margin: 1rem 1.25rem 0.5rem;
 }
 
 /* Base Resets */
-/* Extension context resets - scoped to app/modal containers */
+/* Extension context resets - scoped to app containers */
 .app-container *, 
+#reader-view *, 
 .modal-overlay * {
     box-sizing: border-box;
     margin: 0;
     padding: 0;
 }
 
-/* Reader gets box-sizing only — class rules manage its own spacing */
-#reader-view * {
-    box-sizing: border-box;
-}
-
-/* Lock html+body to viewport when running as native app so only .content scrolls */
-html:has(body.is-app) {
-    height: 100%;
-    overflow: hidden;
-}
-
 body.is-app {
-    height: 100%;
+    height: 100vh;
+    height: 100svh;
     width: 100%;
-    overflow: hidden;
+    overflow: hidden; /* Prevent viewport scroll */
     background-color: hsl(var(--background));
     font-family: 'Inter', 'Tajawal', sans-serif;
     direction: rtl;
@@ -123,27 +71,10 @@ body.is-app .reader-view {
     display: flex;
     flex-direction: column;
     height: 100%;
-    overflow: hidden;
+    width: 100%;
     position: relative;
     padding-top: env(safe-area-inset-top, 28px);
-    /* For phone notch */
-}
-
-/* Status bar background area - white in dark mode with separator */
-.app-container::before {
-    content: '';
-    position: fixed;
-    top: 0;
-    left: 0;
-    right: 0;
-    height: env(safe-area-inset-top, 28px);
-    z-index: 100;
-    background-color: hsl(var(--background));
-    border-bottom: 1px solid hsl(var(--border));
-}
-
-.dark .app-container::before {
-    background-color: #ffffff;
+    overflow: hidden; /* Ensure flex children control their own scrolling */
 }
 
 .app-container header {
@@ -152,7 +83,6 @@ body.is-app .reader-view {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    flex-shrink: 0;
 }
 
 header h1 {
@@ -173,59 +103,101 @@ header h1 {
     height: 24px;
 }
 
-/* Inline Tab Navigation (Extension-style) */
+/* Tabs - Modern Bottom Navbar */
 .tabs-nav {
-    display: inline-flex;
-    height: 2.75rem;
-    align-items: center;
-    justify-content: center;
-    border-radius: var(--radius, 0.5rem);
-    background-color: hsl(var(--muted));
-    padding: 0.25rem;
-    margin: 1rem 1.25rem 0.5rem;
-    width: calc(100% - 2.5rem);
-    flex-shrink: 0;
+    display: none; /* We use .bottom-tabs which overrides or replaces this */
+}
+
+/* Bottom Navbar Styles */
+.bottom-tabs {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  width: 100%;
+  height: calc(4.5rem + env(safe-area-inset-bottom));
+  display: flex !important;
+  align-items: center;
+  justify-content: space-around;
+  background-color: hsla(var(--background), 0.8);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border-top: 1px solid hsl(var(--border));
+  padding-bottom: env(safe-area-inset-bottom);
+  margin: 0;
+  z-index: 100;
+  box-shadow: 0 -4px 6px -1px rgba(0, 0, 0, 0.05);
+}
+
+/* Adjust main content to not be covered by fixed navbar */
+.content {
+  flex: 1;
+  overflow-y: auto;
+  padding: var(--container-padding);
+  padding-bottom: 6rem; /* Space for navbar */
 }
 
 .tab-trigger {
-    display: inline-flex;
+    display: flex;
+    flex-direction: column;
     align-items: center;
     justify-content: center;
+    gap: 0.4rem;
     white-space: nowrap;
-    border-radius: calc(var(--radius, 0.5rem) - 2px);
-    padding: 0.5rem 1rem;
-    font-size: 0.875rem;
+    padding: 0.25rem;
+    font-size: 0.75rem;
     font-weight: 500;
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
     cursor: pointer;
     border: none;
     background: transparent;
     color: hsl(var(--muted-foreground));
     flex: 1;
     font-family: inherit;
+    position: relative;
     -webkit-tap-highlight-color: transparent;
-    transition: background-color 0.2s, color 0.2s, box-shadow 0.2s, transform 0.15s;
 }
 
-.tab-trigger:hover {
-    color: hsl(var(--foreground));
+.tab-trigger svg,
+.tab-trigger i {
+    width: 22px;
+    height: 22px;
+    padding: 2px;
+    border-radius: 1.25rem;
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
 }
 
 .tab-trigger.active {
-    background-color: hsl(var(--background));
-    color: hsl(var(--foreground));
-    box-shadow: 0 1px 2px hsl(var(--foreground) / 0.06);
+    color: hsl(var(--quran-green));
+    font-weight: 700;
 }
 
-.tab-trigger:active {
-    transform: scale(0.97);
+.tab-trigger.active svg,
+.tab-trigger.active i {
+    background-color: hsla(var(--quran-green), 0.15);
+    color: hsl(var(--quran-green));
+    stroke: hsl(var(--quran-green));
+    padding: 4px 12px;
+    width: 48px; /* Pill width */
+    height: 28px;
+    font-size: 1.1rem;
+}
+
+.tab-trigger span {
+    transition: transform 0.2s ease;
+}
+
+.tab-trigger.active span {
+    transform: scale(1.05);
 }
 
 .content {
     flex: 1;
     overflow-y: auto;
     padding: var(--container-padding);
-    padding-bottom: calc(var(--container-padding) + env(safe-area-inset-bottom, 16px));
-    min-height: 0;
 }
 
 .tab-content {
@@ -421,7 +393,6 @@ header h1 {
     display: block;
     font-size: 0.875rem;
     font-weight: 500;
-    color: hsl(var(--foreground));
     margin-bottom: 0.375rem;
 }
 
@@ -430,29 +401,11 @@ header h1 {
     border-radius: var(--radius);
     border: 1px solid hsl(var(--input));
     background-color: hsl(var(--background));
-    color: hsl(var(--foreground));
     padding: 0.5rem 0.75rem;
     font-size: 0.875rem;
     font-family: inherit;
     outline: none;
     transition: border-color 0.2s;
-    /* Prevent WebView/browser dark-mode color injection */
-    color-scheme: light dark;
-    -webkit-text-fill-color: hsl(var(--foreground));
-}
-
-.input::placeholder {
-    color: hsl(var(--muted-foreground));
-    -webkit-text-fill-color: hsl(var(--muted-foreground));
-    opacity: 1;
-}
-
-select.input {
-    /* Select dropdowns need special treatment on Android WebView */
-    -webkit-appearance: none;
-    appearance: none;
-    color: hsl(var(--foreground));
-    -webkit-text-fill-color: hsl(var(--foreground));
 }
 
 .input:focus {
@@ -820,29 +773,12 @@ select.input {
     position: absolute;
     inset: 0;
     height: 100%;
-    background: hsl(var(--background));
+    background: #fcfbf9;
     display: flex;
     flex-direction: column;
-    padding-top: env(safe-area-inset-top, 28px);
+    padding-top: 28px;
     z-index: 20;
     overflow: hidden;
-}
-
-/* Status bar background area for reader - white in dark mode */
-.reader-view::before {
-    content: '';
-    position: fixed;
-    top: 0;
-    left: 0;
-    right: 0;
-    height: env(safe-area-inset-top, 28px);
-    z-index: 100;
-    background-color: hsl(var(--background));
-    border-bottom: 1px solid hsl(var(--border));
-}
-
-.dark .reader-view::before {
-    background-color: #ffffff;
 }
 
 .reader-header {
@@ -850,7 +786,7 @@ select.input {
     align-items: center;
     gap: 0.75rem;
     padding: 0.75rem 1rem;
-    background: hsl(var(--card));
+    background: white;
     border-bottom: 1px solid hsl(var(--border));
     flex-shrink: 0;
 }
@@ -877,136 +813,47 @@ select.input {
 .reader-content {
     flex: 1;
     overflow-y: auto;
-    min-height: 0;
-    padding: 1rem;
-    /* Extra bottom padding so text doesn't hide behind the FAB */
-    padding-bottom: calc(5rem + env(safe-area-inset-bottom));
+    padding: 1.5rem 1rem;
     direction: rtl;
-    background: hsl(var(--background));
 }
 
-/* Footer collapsed — button is now a floating action button */
 .reader-footer {
-    position: static;
-    padding: 0;
-    height: 0;
-    overflow: visible;
-    border: none;
-    background: transparent;
+    padding: 0.75rem 1rem;
+    background: white;
+    border-top: 1px solid hsl(var(--border));
+    text-align: center;
     flex-shrink: 0;
-}
-
-/* Floating Action Button - Mark as Read */
-#mark-read-btn {
-    position: absolute;
-    bottom: calc(1.5rem + env(safe-area-inset-bottom));
-    left: 50%;
-    transform: translateX(-50%);
-    /* Override .btn-xl full-width */
-    width: auto;
-    min-width: 180px;
-    height: 3rem;
-    padding: 0 1.75rem;
-    border-radius: 9999px;
-    font-size: 0.9rem;
-    font-weight: 600;
-    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
-    z-index: 30;
-    white-space: nowrap;
-    transition: transform 0.2s ease, box-shadow 0.2s ease;
-}
-
-#mark-read-btn:active {
-    transform: translateX(-50%) scale(0.96);
-    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
 }
 
 /* ===========================================================================
    MUSHAF STYLES (Reader)
-   Mimics Ottoman Mushaf layout with responsive sizing.
-   Uses flex layout (justify-content: space-between) for even word distribution.
    =========================================================================== */
-
-/* --- Responsive Mushaf sizing ---
-   Scales font-size and line-height based on viewport width.
-   Small phone (320px) → Normal (375px) → Large (430px) → Tablet (768px+)
-*/
-:root {
-    --mushaf-font-size: clamp(19px, 5.8vw, 32px);
-    --mushaf-line-height: clamp(42px, 12vw, 62px);
-    --mushaf-surah-font-size: clamp(36px, 10vw, 60px);
-    --mushaf-basmala-font-size: clamp(18px, 5.2vw, 28px);
-    --mushaf-ayah-symbol-size: clamp(16px, 4.8vw, 28px);
-}
-
 .mushaf-page {
     display: flex;
     flex-direction: column;
-    gap: 0;
-    margin-bottom: 0;
-    padding: 0.5rem 0.35rem;
-    background: transparent;
-    border: none;
-    border-radius: 0;
-    direction: rtl;
+    gap: 2px;
+    margin-bottom: 1.5rem;
 }
 
-/* Each line: flex row, words distributed edge-to-edge (like printed Mushaf) */
 .mushaf-line {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    white-space: nowrap;
-    min-height: var(--mushaf-line-height);
-    font-size: var(--mushaf-font-size);
+    min-height: 40px;
+    font-size: 22px;
     font-family: 'UthmanicHafs', serif;
-    color: hsl(var(--foreground));
-    direction: rtl;
-    box-sizing: border-box;
-    overflow: hidden;
+    color: #1F2937;
+    flex-wrap: wrap;
 }
 
-/* Last line with few words — center instead of stretching */
 .mushaf-line.centered {
     justify-content: center;
-    gap: clamp(8px, 2.5vw, 15px);
-}
-
-/* Partial lines — wird starts/ends mid-Mushaf-line */
-/* Dynamic padding is set inline via JS based on word position ratios */
-
-/* Gap on right (RTL start) — wird starts mid-line */
-.mushaf-line.partial-start {
-    justify-content: space-between;
-    /* padding-right set dynamically in JS */
-}
-
-/* Gap on left (RTL end) — wird ends mid-line */
-.mushaf-line.partial-end {
-    justify-content: space-between;
-    /* padding-left set dynamically in JS */
-}
-
-/* Gap on both sides */
-.mushaf-line.partial-both {
-    justify-content: space-between;
-    /* padding-right and padding-left set dynamically in JS */
-}
-
-/* When partial line has only 1 word, center it in the remaining space */
-.mushaf-line.partial-start.single-word,
-.mushaf-line.partial-end.single-word,
-.mushaf-line.partial-both.single-word {
-    justify-content: center;
+    gap: 10px;
 }
 
 .mushaf-word {
-    display: inline-flex;
-    align-items: center;
     cursor: pointer;
     transition: color 0.2s;
-    user-select: text;
-    flex-shrink: 0;
 }
 
 .mushaf-word:hover {
@@ -1015,90 +862,43 @@ select.input {
 
 .mushaf-word.bookmarked {
     background: hsl(var(--quran-green) / 0.15);
-    border-radius: 4px;
-    padding: 2px 4px;
-    margin: -2px -4px;
-    box-shadow: 0 0 0 2px hsl(var(--quran-green) / 0.3);
+    border-radius: 3px;
+    padding: 1px 3px;
 }
 
 .ayah-symbol {
     color: hsl(var(--quran-green));
     font-family: 'UthmanicHafs', serif;
-    font-size: var(--mushaf-ayah-symbol-size);
-    margin: 0 2px;
-    user-select: text;
-    display: inline-flex;
-    align-items: center;
-    flex-shrink: 0;
+    font-size: 0.85em;
+    margin: 0 3px;
 }
 
 .surah-header {
     font-family: 'SurahNames', serif;
-    font-size: var(--mushaf-surah-font-size);
-    height: var(--mushaf-line-height);
+    font-size: 40px;
+    text-align: center;
+    margin: 15px 0;
+    color: #222;
     display: flex;
     justify-content: center;
-    align-items: center;
-    gap: clamp(8px, 3vw, 20px);
-    margin: clamp(10px, 3vw, 20px) 0;
-    color: hsl(var(--foreground));
+    gap: 10px;
 }
 
 .basmala {
     font-family: 'Amiri', serif;
-    font-size: var(--mushaf-basmala-font-size);
+    font-size: 22px;
     text-align: center;
-    margin: clamp(10px, 3vw, 20px) 0;
-    color: hsl(var(--foreground));
-    height: var(--mushaf-line-height);
-    display: flex;
-    align-items: center;
-    justify-content: center;
+    margin: 15px 0;
+    color: #111;
 }
 
 .page-footer {
-    display: flex;
-    align-items: center;
-    gap: 1rem;
     text-align: center;
-    font-size: 0.7rem;
+    font-size: 0.75rem;
     color: hsl(var(--muted-foreground));
-    padding: 1.25rem 0;
-    margin: 0.5rem 0;
-}
-
-.page-footer::before,
-.page-footer::after {
-    content: '';
-    flex: 1;
-    height: 1px;
-    background-color: hsl(var(--border));
-}
-
-/* --- Mushaf responsive breakpoints --- */
-
-/* Very small phones (< 340px) - e.g. iPhone SE 1st gen */
-@media (max-width: 340px) {
-    :root {
-        --mushaf-font-size: 17px;
-        --mushaf-line-height: 38px;
-    }
-}
-
-/* Tablets and larger screens */
-@media (min-width: 600px) {
-    :root {
-        --mushaf-font-size: 28px;
-        --mushaf-line-height: 56px;
-        --mushaf-surah-font-size: 56px;
-        --mushaf-basmala-font-size: 26px;
-    }
-    
-    .mushaf-page {
-        padding: 1rem;
-        max-width: 600px;
-        margin: 0 auto;
-    }
+    padding-top: 0.75rem;
+    margin-top: 1rem;
+    border-top: 1px solid hsl(var(--border));
 }
 
 /* ===========================================================================
