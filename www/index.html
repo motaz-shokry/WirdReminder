@@ -23,6 +23,16 @@
     <link rel="stylesheet" href="styles.css" id="legacy-styles" disabled>
     <link rel="stylesheet" href="core/css/theme-toggle.css">
 
+    <!-- Dark mode: restore theme before first paint to prevent FOUC -->
+    <script>
+      (function() {
+        var theme = localStorage.getItem('theme');
+        if (theme === 'dark' || (!theme && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+          document.documentElement.classList.add('dark');
+        }
+      })();
+    </script>
+
     <!-- Favicon -->
     <link rel="icon" type="image/png" href="core/assets/icons/icon48.png">
 
