@@ -1,265 +1,381 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="ar" dir="rtl">
-
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>مُذكِّر الوِرد اليومي</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@300;400;500;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="../core/css/base.css">
-    <link rel="stylesheet" href="../core/css/layout.css">
-    <link rel="stylesheet" href="../core/css/components.css">
-    <link rel="stylesheet" href="../core/css/theme-toggle.css">
-</head>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Tajawal:wght@300;400;500;700&display=swap"
+      rel="stylesheet"
+    />
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/7.0.1/css/all.min.css"
+      integrity="sha512-2SwdPD6INVrV/lHTZbO2nodKhrnDdJK9/kg2XD1r9uGqPo1cUbujc+IYdlYdEErWNu69gVcYgdxlmVmzTWnetw=="
+      crossorigin="anonymous"
+      referrerpolicy="no-referrer"
+    />
 
-<body>
+    <link rel="stylesheet" href="../core/css/baseColors.css" />
+    <link rel="stylesheet" href="../core/css/base.css" />
+    <link rel="stylesheet" href="../core/css/layout.css" />
+    <link rel="stylesheet" href="../core/css/components.css" />
+    <link rel="stylesheet" href="../core/css/theme-toggle.css" />
+  </head>
+
+  <body>
     <div class="app-container">
-        <!-- Header -->
-        <header>
-            <div class="logo-area" style="display:flex; align-items:center; gap:8px;">
-                <img src="../core/assets/icons/icon48.png" alt="Wird Logo" style="width:24px; height:24px;">
-                <h1>مُذكِّر الوِرد اليومي</h1>
-            </div>
-            <div id="theme-toggle-container" class="theme-toggle-container"></div>
-        </header>
+      <div class="space-top"></div>
+      <!-- Header -->
+      <header>
+        <div
+          class="logo-area"
+          style="display: flex; align-items: center; gap: 8px"
+        >
+          <img
+            src="../core/assets/icons/icon48.png"
+            alt="Wird Logo"
+            style="width: 24px; height: 24px"
+          />
+          <h1>مُذكِّر الوِرد اليومي</h1>
+        </div>
+        <div id="theme-toggle-container" class="theme-toggle-container"></div>
+      </header>
 
-             <div class="tabs-nav">
-            <button class="tab-trigger active" data-tab="reminders-tab">
-                <i class="bi bi-card-checklist"></i>
-                <span>التذكيرات</span>
-            </button>
-            <button class="tab-trigger" data-tab="add-new">
-                <i id="add-new-icon" class="bi bi-plus-circle"></i>
-                <i id="edit-new-icon" class="bi bi-pencil-square" style="display: none;"></i>
-                <span id="add-new-btn">إضافة</span>
-            </button>
-            <button class="tab-trigger" data-tab="settings-tab">
-                <i class="bi bi-gear-wide-connected"></i>
-                <span>الإعدادات</span>
-            </button>
-            <button class="tab-trigger" id="pwa-downloads-trigger" data-tab="downloads-tab" style="display: none;">
-                <i class="bi bi-cloud-arrow-down"></i>
-                <span>التحميل</span>
-            </button>
+      <div class="tabs-nav">
+        <button
+          class="btn-onlyicon tab-trigger active"
+          data-tab="reminders-tab"
+        >
+          <i class="fa-solid fa-bars"></i>
+        </button>
+        <button class="btn-onlyicon tab-trigger" data-tab="add-new">
+          <i class="fa-solid fa-plus"></i>
+        </button>
+        <button class="btn-onlyicon tab-trigger" data-tab="settings-tab">
+          <i class="fa-solid fa-gear"></i>
+        </button>
+      </div>
+
+      <!-- Content -->
+      <main class="content">
+        <!-- Tab: Reminders -->
+        <div id="reminders-tab" class="tab-content active">
+          <section class="section">
+            <h2 class="section-title" style="text-align: center">قائمتي</h2>
+            <div id="my-reminders-list" class="list-container">
+              <!-- Custom Reminders -->
+            </div>
+          </section>
+
+          <div class="divider"></div>
+
+          <section class="section">
+            <h2 class="section-title" style="text-align: center">
+              تذكيرات السنن
+            </h2>
+            <div id="presets-list" class="list-container">
+              <!-- Presets -->
+            </div>
+          </section>
         </div>
 
-        <!-- Content -->
-        <main class="content">
-            <!-- Tab: Reminders -->
-            <section id="reminders-tab" class="tab-content active">
-                <h2 class="section-title">قائمتي</h2>
-                <div id="my-reminders-list" class="list-container">
-                    <!-- Custom Reminders -->
-                </div>
+        <!-- Tab: Add New / Edit -->
+        <section id="add-new" class="tab-content">
+          <form id="add-reminder-form" class="form">
+            <input type="hidden" id="edit-id" value="" />
 
-                <div class="divider"></div>
+            <h2 class="form-title" style="text-align: center">
+              اضافة تذكير جديد
+            </h2>
 
-                <h2 class="section-title">تذكيرات السنن</h2>
-                <div id="presets-list" class="list-container">
-                    <!-- Presets -->
-                </div>
-            </section>
-
-            <!-- Tab: Add New / Edit -->
-            <section id="add-new" class="tab-content">
-                <form id="add-reminder-form">
-                    <input type="hidden" id="edit-id" value="">
-
-                    <div class="form-item">
-                        <label class="label">نوع التذكير</label>
-                        <select id="reminder-type" class="input">
-                            <option value="surah">سورة كاملة</option>
-                            <option value="ayah_range">آيات محددة</option>
-                            <option value="juz">جزء من القرآن</option>
-                        </select>
-                    </div>
-
-                    <div class="form-item">
-                        <label class="label">اختر الهدف</label>
-                        <select id="target-select" class="input">
-                            <option value="" disabled selected>جاري التحميل...</option>
-                        </select>
-                    </div>
-
-                    <div id="ayah-range-group" style="display:none; gap: 0.75rem;" class="form-item">
-                        <div style="display: flex; gap: 0.5rem; width: 100%;">
-                            <div style="flex: 1;">
-                                <label class="label" style="font-size: 0.7rem;">من آية</label>
-                                <input type="number" id="start-ayah" class="input" placeholder="1" min="1">
-                            </div>
-                            <div style="flex: 1;">
-                                <label class="label" style="font-size: 0.7rem;">إلى آية</label>
-                                <input type="number" id="end-ayah" class="input" placeholder="5" min="1">
-                            </div>
-                        </div>
-                        <p id="ayah-range-error" class="error-message"
-                            style="display: none; color: hsl(var(--destructive)); font-size: 0.75rem; margin-top: 0.25rem;">
-                        </p>
-                    </div>
-
-                    <div class="form-item">
-                        <label class="label">اسم التذكير</label>
-                        <input type="text" id="reminder-name" placeholder="مثال: ورد الفجر" class="input" required>
-                    </div>
-
-                    <div style="display: flex; gap: 0.75rem;" class="form-item">
-                        <div style="flex: 1.5;">
-                            <label class="label">التكرار</label>
-                            <select id="frequency" class="input">
-                                <option value="daily">يومياً</option>
-                                <option value="weekly">أسبوعياً</option>
-                            </select>
-                        </div>
-                        <div style="flex: 1;">
-                            <label class="label">الوقت</label>
-                            <input type="time" id="time-select" class="input" required>
-                        </div>
-                    </div>
-
-                    <div class="form-item" id="day-select-group" style="display:none;">
-                        <label class="label">اليوم</label>
-                        <select id="day-select" class="input">
-                            <option value="5">الجمعة</option>
-                            <option value="6">السبت</option>
-                            <option value="0">الأحد</option>
-                            <option value="1">الاثنين</option>
-                            <option value="2">الثلاثاء</option>
-                            <option value="3">الأربعاء</option>
-                            <option value="4">الخميس</option>
-                        </select>
-                    </div>
-
-                    <div class="submit-area">
-                        <button type="submit" id="submit-btn" class="btn btn-primary btn-xl">حفظ التذكير</button>
-                        <button type="button" id="cancel-edit-btn" class="btn btn-outline btn-xl"
-                            style="display:none; margin-top:0.5rem;">إلغاء التعديل</button>
-                    </div>
-                </form>
-            </section>
-
-            <!-- Tab: Reflections -->
-            <section id="reflections-tab" class="tab-content">
-                <div class="search-area">
-                    <input type="text" id="ref-search" class="input" placeholder="بحث في تدبراتك...">
-                </div>
-
-                <div id="reflections-journal-list" class="list-container">
-                    <div class="empty-state">لا توجد تدبرات.</div>
-                </div>
-            </section>
-
-            <!-- Tab: Settings -->
-            <section id="settings-tab" class="tab-content">
-                <h2 class="section-title">النسخ الاحتياطي</h2>
-                <div class="settings-group">
-                    <p class="settings-description">يمكنك تصدير بياناتك لحفظها أو نقلها إلى جهاز آخر.</p>
-                    <button id="export-data" class="btn btn-primary btn-xl">
-                        📤 تصدير البيانات
-                    </button>
-                    <button id="import-data" class="btn btn-outline btn-xl">
-                        📥 استيراد البيانات
-                    </button>
-                    <input type="file" id="import-file-input" accept=".json" style="display:none;">
-                </div>
-
-                <div class="divider"></div>
-
-                <h2 class="section-title">إدارة البيانات</h2>
-                <div class="settings-group">
-                    <p class="settings-description">حذف سجل الإنجاز فقط مع الاحتفاظ بالتذكيرات.</p>
-                    <button id="clear-history" class="btn btn-outline btn-xl">
-                        🗑️ مسح سجل الإنجاز
-                    </button>
-                </div>
-
-                <div class="divider"></div>
-
-                <h2 class="section-title" style="color: hsl(var(--destructive));">منطقة الخطر</h2>
-                <div class="settings-group danger-zone">
-                    <p class="settings-description">إعادة ضبط الإضافة بالكامل وحذف جميع البيانات. هذا الإجراء لا يمكن
-                        التراجع عنه.</p>
-                    <button id="reset-extension" class="btn btn-xl"
-                        style="background-color: hsl(var(--destructive)); color: white;">
-                        ⚠️ إعادة ضبط الإضافة
-                    </button>
-                </div>
-            </section>
-        </main>
-
-        <!-- Delete Confirmation Modal -->
-        <div id="delete-modal" class="modal-overlay" style="display: none;">
-            <div class="modal-content">
-                <h3 class="modal-title">تأكيد الحذف</h3>
-                <p class="modal-description">هل أنت متأكد من رغبتك في حذف هذا التذكير؟ لا يمكن التراجع عن هذه الخطوة.
-                </p>
-                <div class="modal-footer">
-                    <button id="cancel-delete" class="btn btn-outline">إلغاء</button>
-                    <button id="confirm-delete" class="btn btn-primary"
-                        style="background-color: hsl(var(--destructive));">حذف النهائياً</button>
-                </div>
+            <div class="form-item">
+              <label class="label">نوع التذكير</label>
+              <select id="reminder-type" class="input">
+                <option value="surah">سورة كاملة</option>
+                <option value="ayah_range">آيات محددة</option>
+                <option value="juz">جزء من القرآن</option>
+              </select>
             </div>
+
+            <div class="form-item">
+              <label class="label">اختر الهدف</label>
+              <select id="target-select" class="input">
+                <option value="" disabled selected>جاري التحميل...</option>
+              </select>
+            </div>
+
+            <div
+              id="ayah-range-group"
+              style="display: none; gap: 0.75rem"
+              class="form-item"
+            >
+              <div style="display: flex; gap: 0.5rem; width: 100%">
+                <div style="flex: 1">
+                  <label class="label" style="font-size: 0.7rem">من آية</label>
+                  <input
+                    type="number"
+                    id="start-ayah"
+                    class="input"
+                    placeholder="1"
+                    min="1"
+                  />
+                </div>
+                <div style="flex: 1">
+                  <label class="label" style="font-size: 0.7rem">إلى آية</label>
+                  <input
+                    type="number"
+                    id="end-ayah"
+                    class="input"
+                    placeholder="5"
+                    min="1"
+                  />
+                </div>
+              </div>
+              <p
+                id="ayah-range-error"
+                class="error-message"
+                style="
+                  display: none;
+                  color: hsl(var(--destructive));
+                  font-size: 0.75rem;
+                  margin-top: 0.25rem;
+                "
+              ></p>
+            </div>
+
+            <div class="form-item">
+              <label class="label">اسم التذكير</label>
+              <input
+                type="text"
+                id="reminder-name"
+                placeholder="مثال: ورد الفجر"
+                class="input"
+                required
+              />
+            </div>
+
+            <div class="form-item">
+              <label class="label">التكرار</label>
+              <select id="frequency" class="input">
+                <option value="daily">يومياً</option>
+                <option value="weekly">أسبوعياً</option>
+              </select>
+            </div>
+            
+            <div class="form-item">
+              <label class="label">الوقت</label>
+              <input type="time" id="time-select" class="input" required />
+            </div>
+
+            <div class="form-item" id="day-select-group" style="display: none">
+              <label class="label">اليوم</label>
+              <select id="day-select" class="input">
+                <option value="5">الجمعة</option>
+                <option value="6">السبت</option>
+                <option value="0">الأحد</option>
+                <option value="1">الاثنين</option>
+                <option value="2">الثلاثاء</option>
+                <option value="3">الأربعاء</option>
+                <option value="4">الخميس</option>
+              </select>
+            </div>
+
+            <div class="submit-area">
+              <button
+                type="submit"
+                id="submit-btn"
+                class="btn btn-primary btn-xl"
+              >
+                حفظ التذكير
+              </button>
+              <button
+                type="button"
+                id="cancel-edit-btn"
+                class="btn btn-outline btn-xl"
+                style="display: none; margin-top: 0.5rem"
+              >
+                إلغاء التعديل
+              </button>
+            </div>
+          </form>
+        </section>
+
+        <!-- Tab: Reflections -->
+        <section id="reflections-tab" class="tab-content">
+          <div class="search-area">
+            <input
+              type="text"
+              id="ref-search"
+              class="input"
+              placeholder="بحث في تدبراتك..."
+            />
+          </div>
+
+          <div id="reflections-journal-list" class="list-container">
+            <div class="empty-state">لا توجد تدبرات.</div>
+          </div>
+        </section>
+
+        <!-- Tab: Settings -->
+        <div id="settings-tab" class="tab-content">
+          <section class="settings-group">
+            <div class="section-content" style="text-align: center">
+              <h2 class="section-title">النسخ الاحتياطي</h2>
+              <p class="section-description">
+                يمكنك تصدير بياناتك لحفظها أو نقلها إلى جهاز آخر.
+              </p>
+            </div>
+            <button id="export-data" class="btn btn-primary btn-xl">
+              تصدير البيانات
+            </button>
+            <button id="import-data" class="btn btn-outline btn-xl">
+              استيراد البيانات
+            </button>
+            <input
+              type="file"
+              id="import-file-input"
+              accept=".json"
+              style="display: none"
+            />
+          </section>
+
+          <div class="divider"></div>
+
+          <section class="settings-group">
+            <div class="section-content" style="text-align: center">
+              <h2 class="section-title">إدارة البيانات</h2>
+              <p class="section-description">
+                حذف سجل الإنجاز فقط مع الاحتفاظ بالتذكيرات.
+              </p>
+            </div>
+            <button id="clear-history" class="btn btn-outline btn-xl">
+              مسح سجل الإنجاز
+            </button>
+          </section>
+
+          <div class="divider"></div>
+
+          <section class="settings-group danger-zone">
+            <div class="section-content" style="text-align: center">
+              <h2
+                class="section-title"
+                style="color: var(--main-background-red)"
+              >
+                منطقة الخطر
+              </h2>
+              <p class="section-description">
+                إعادة ضبط الإضافة بالكامل وحذف جميع البيانات. هذا الإجراء لا
+                يمكن التراجع عنه.
+              </p>
+            </div>
+
+            <button id="reset-extension" class="btn btn-destructive-r btn-xl">
+              إعادة ضبط الإضافة
+            </button>
+          </section>
         </div>
 
-        <!-- Generic Alert Modal -->
-        <div id="alert-modal" class="modal-overlay" style="display: none;">
-            <div class="modal-content">
-                <h3 id="alert-title" class="modal-title">تنبيه</h3>
-                <p id="alert-message" class="modal-description"></p>
-                <div class="modal-footer">
-                    <button id="alert-ok" class="btn btn-primary">موافق</button>
-                </div>
-            </div>
-        </div>
+        <div class="space-bottom"></div>
+      </main>
 
-        <!-- Calendar Modal -->
-        <div id="calendar-modal" class="modal-overlay" style="display: none;">
-            <div class="modal-content calendar-modal">
-                <div class="calendar-header">
-                    <button id="calendar-prev" class="btn btn-ghost calendar-nav">
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                            stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                            <polyline points="9 18 15 12 9 6"></polyline>
-                        </svg>
-                    </button>
-                    <h3 id="calendar-title" class="modal-title"></h3>
-                    <button id="calendar-next" class="btn btn-ghost calendar-nav">
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                            stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                            <polyline points="15 18 9 12 15 6"></polyline>
-                        </svg>
-                    </button>
-                </div>
-                <div id="calendar-reminder-name" class="calendar-reminder-name"></div>
-                <div class="calendar-weekdays">
-                    <span>أحد</span>
-                    <span>اثن</span>
-                    <span>ثلث</span>
-                    <span>أربع</span>
-                    <span>خمس</span>
-                    <span>جمع</span>
-                    <span>سبت</span>
-                </div>
-                <div id="calendar-grid" class="calendar-grid"></div>
-                <div class="calendar-legend">
-                    <div class="legend-item">
-                        <span class="legend-icon completed">✓</span>
-                        <span>مُنجز</span>
-                    </div>
-                    <div class="legend-item">
-                        <span class="legend-icon missed"></span>
-                        <span>غير مُنجز</span>
-                    </div>
-                </div>
-                <div class="modal-footer">
-                    <button id="calendar-close" class="btn btn-primary btn-xl">إغلاق</button>
-                </div>
-            </div>
+      <!-- Delete Confirmation Modal -->
+      <div id="delete-modal" class="modal-overlay" style="display: none">
+        <div class="modal-content">
+          <h3 class="modal-title">تأكيد الحذف</h3>
+          <p class="modal-description">
+            هل أنت متأكد من رغبتك في حذف هذا التذكير؟ لا يمكن التراجع عن هذه
+            الخطوة.
+          </p>
+          <div class="modal-footer">
+            <button id="cancel-delete" class="btn btn-outline">إلغاء</button>
+            <button
+              id="confirm-delete"
+              class="btn btn-primary"
+              style="background-color: hsl(var(--destructive))"
+            >
+              حذف النهائياً
+            </button>
+          </div>
         </div>
+      </div>
 
+      <!-- Generic Alert Modal -->
+      <div id="alert-modal" class="modal-overlay" style="display: none">
+        <div class="modal-content">
+          <h3 id="alert-title" class="modal-title">تنبيه</h3>
+          <p id="alert-message" class="modal-description"></p>
+          <div class="modal-footer">
+            <button id="alert-ok" class="btn btn-primary">موافق</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Calendar Modal -->
+      <div id="calendar-modal" class="modal-overlay" style="display: none">
+        <div class="modal-content calendar-modal">
+          <div class="calendar-header">
+            <button id="calendar-prev" class="btn btn-ghost calendar-nav">
+              <svg
+                width="16"
+                height="16"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              >
+                <polyline points="9 18 15 12 9 6"></polyline>
+              </svg>
+            </button>
+            <h3 id="calendar-title" class="modal-title"></h3>
+            <button id="calendar-next" class="btn btn-ghost calendar-nav">
+              <svg
+                width="16"
+                height="16"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              >
+                <polyline points="15 18 9 12 15 6"></polyline>
+              </svg>
+            </button>
+          </div>
+          <div id="calendar-reminder-name" class="calendar-reminder-name"></div>
+          <div class="calendar-weekdays">
+            <span>أحد</span>
+            <span>اثن</span>
+            <span>ثلث</span>
+            <span>أربع</span>
+            <span>خمس</span>
+            <span>جمع</span>
+            <span>سبت</span>
+          </div>
+          <div id="calendar-grid" class="calendar-grid"></div>
+          <div class="calendar-legend">
+            <div class="legend-item">
+              <span class="legend-icon completed">✓</span>
+              <span>مُنجز</span>
+            </div>
+            <div class="legend-item">
+              <span class="legend-icon missed"></span>
+              <span>غير مُنجز</span>
+            </div>
+          </div>
+          <div class="modal-footer">
+            <button id="calendar-close" class="btn btn-primary btn-xl">
+              إغلاق
+            </button>
+          </div>
+        </div>
+      </div>
     </div>
     <script src="popup.js" type="module"></script>
-</body>
-
+  </body>
 </html>
